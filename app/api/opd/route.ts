@@ -1,0 +1,69 @@
+import { NextResponse } from "next/server"
+import { supabase } from "@/lib/supabase"
+import { getAuthSession } from "@/lib/auth"
+
+export async function GET(request: Request) {
+    try {
+        const session = await getAuthSession()
+        if (!session) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        }
+
+        const { searchParams } = new URL(request.url)
+        const dateFilter = searchParams.get("date") // e.g. "26 Mar 2026"
+
+        let query = supabase.from("opd").select("*").order("created_at", { ascending: false })
+
+        // Filter by consultant name if the user is a doctor
+        if (session.role === "DOCTOR") {
+            query = query.eq("consultant", session.name)
+        }
+
+        if (dateFilter) {
+            // Flexible filtering: match both "01 Apr 2026" and older "01/Apr/2026" formats
+            const alternateFilter = dateFilter.replace(/ /g, '/')
+            query = query.or(`date.eq."${dateFilter}",date.eq."${alternateFilter}"`)
+        }
+
+        const { data, error } = await query
+        if (error) throw error
+        return NextResponse.json(data)
+    } catch (error) {
+        console.error("Failed to fetch OPD registrations:", error)
+        return NextResponse.json({ error: "Failed to fetch OPD registrations" }, { status: 500 })
+    }
+}
+
+export async function POST(request: Request) {
+    try {
+        const session = await getAuthSession()
+        if (!session) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        }
+
+        const body = await request.json()
+        const opdData: any = {
+            uhid_no: body.uhidNo || body.uhid_no,
+            date: body.date,
+            token_no: body.tokenNo || body.token_no,
+            patient_name: body.patientName || body.patient_name,
+            age_sex: body.age && body.sex ? `${body.age} / ${body.sex}` : (body.ageSex || body.age_sex),
+            opd_no: body.opdNo || body.opd_no,
+            guardian_name: body.guardianName || body.guardian_name,
+            mobile_no: body.mobileNo || body.mobile_no,
+            valid_upto: body.validUpto || body.valid_upto,
+            consultant: body.consultant,
+            address: body.address,
+            patient_type: body.patientType || body.patient_type,
+            unique_citizen_card_number: body.uniqueCitizenCardNumber || body.unique_citizen_card_number,
+            created_by: session.id,
+        }
+
+        const { data, error } = await supabase.from("opd").insert(opdData).select().single()
+        if (error) throw error
+        return NextResponse.json(data, { status: 201 })
+    } catch (error) {
+        console.error("Failed to create OPD registration:", error)
+        return NextResponse.json({ error: "Failed to create OPD registration" }, { status: 500 })
+    }
+}
