@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase"
 import bcrypt from "bcryptjs"
 import { getAuthSession } from "@/lib/auth"
 
-// GET /api/auth/admin/users - Fetch all users (Admin only)
+// GET /api/auth/admin/users - Fetch all users (Admin only).......
 export async function GET() {
     try {
         const session = await getAuthSession()
