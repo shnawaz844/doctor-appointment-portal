@@ -130,6 +130,12 @@ const navItems = [
     icon: Settings,
     roles: ["ADMIN"],
   },
+  {
+    title: "Hospitals",
+    href: "/super-admin/hospitals",
+    icon: Building,
+    roles: ["SUPER_ADMIN"],
+  },
 ]
 
 export function AppSidebar() {
@@ -193,12 +199,14 @@ export function AppSidebar() {
                 <span className="text-sm font-black tracking-tight text-sidebar-foreground leading-none whitespace-normal mb-1.5" title="Doctor's Appointments">
                   Management System
                 </span>
-                <div className="flex items-center gap-1.5">
-                  <div className="h-px w-4 bg-primary/30" />
-                  <span className="text-[9px] font-bold text-muted-foreground/80 uppercase tracking-wider whitespace-normal" title="Supported by Parth Gautam Foundation">
-                    Parth Gautam Foundation
-                  </span>
-                </div>
+                {user?.role !== "SUPER_ADMIN" && user?.hospital_name && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-px w-4 bg-primary/30" />
+                    <span className="text-[9px] font-bold text-muted-foreground/80 uppercase tracking-wider whitespace-normal" title={`Supported by ${user.hospital_name}`}>
+                      {user.hospital_name}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </Link>

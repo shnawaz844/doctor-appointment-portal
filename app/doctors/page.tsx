@@ -18,6 +18,7 @@ export default function DoctorsPage() {
     const [formData, setFormData] = useState({ name: "", specialty: "", phone: "", email: "", password: "", image: "" })
     const [imageFile, setImageFile] = useState<File | null>(null)
     const [imagePreview, setImagePreview] = useState<string | null>(null)
+    const [error, setError] = useState<string | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,6 +64,7 @@ export default function DoctorsPage() {
         e.preventDefault()
         if (!formData.name || !formData.specialty) return
         setSubmitting(true)
+        setError(null)
         try {
             let imageUrl = formData.image
 
@@ -111,9 +113,13 @@ export default function DoctorsPage() {
                 setImagePreview(null)
                 if (fileInputRef.current) fileInputRef.current.value = ""
                 fetchData()
+            } else {
+                const errData = await res.json()
+                setError(errData.error || "Failed to add doctor")
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(error)
+            setError(error.message || "An unexpected error occurred")
         } finally {
             setSubmitting(false)
         }
@@ -234,7 +240,12 @@ export default function DoctorsPage() {
                                         required
                                     />
                                 </div>
-                                <Button type="submit" disabled={submitting}>
+                                {error && (
+                                    <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg">
+                                        {error}
+                                    </div>
+                                )}
+                                <Button type="submit" disabled={submitting} className="w-full">
                                     {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
                                     Add Doctor
                                 </Button>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, FileText, Activity, Clock, Loader2, Calendar, ChevronRight } from "lucide-react"
+import { Users, FileText, Activity, Clock, Loader2, Calendar, ChevronRight, Building } from "lucide-react"
 import { DiagnosisChart } from "@/components/diagnosis-chart"
 import { RecentPatientsTable } from "@/components/recent-patients-table"
 import { useRouter } from "next/navigation"
@@ -20,6 +20,7 @@ export default function DashboardPage() {
     todayTotal: 0,
     todayCompleted: 0,
     nextAppointment: null as any,
+    isSuperAdmin: false,
   })
   const [loading, setLoading] = useState(true)
 
@@ -52,6 +53,9 @@ export default function DashboardPage() {
           })
           .sort((a: any, b: any) => a.time.localeCompare(b.time))
 
+        const meRes = await fetch("/api/auth/me")
+        const meData = await meRes.json()
+
         setStats({
           totalPatients: Array.isArray(patients) ? patients.length : 0,
           newPatients: Array.isArray(patients) ? patients.filter((p: any) => {
@@ -64,6 +68,7 @@ export default function DashboardPage() {
           todayTotal: todayAppts.length,
           todayCompleted: todayAppts.filter((a: any) => a.status === "Completed").length,
           nextAppointment: upcomingAppts[0] || null,
+          isSuperAdmin: meData.user?.role === "SUPER_ADMIN",
         })
       } catch (error) {
         console.error("Failed to fetch stats:", error)
@@ -85,6 +90,29 @@ export default function DashboardPage() {
 
       <div className="container mx-auto relative py-6 md:py-10 px-4 md:px-8">
         <PageHeader title="Dashboard" description="Overview of your healthcare system" showSearch />
+
+        {stats.isSuperAdmin && (
+          <div className="mb-8 p-6 rounded-3xl bg-linear-to-r from-primary/20 to-primary/5 border border-primary/20 backdrop-blur-xl animate-in fade-in slide-in-from-top-4 duration-700">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4 text-center md:text-left">
+                <div className="p-3 bg-primary/20 rounded-2xl">
+                  <Building className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white">Hospital Management</h3>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Onboard new facilities and manage existing healthcare centers.</p>
+                </div>
+              </div>
+              <Button 
+                onClick={() => router.push("/super-admin/hospitals")}
+                className="rounded-2xl h-12 px-8 font-black text-xs uppercase tracking-widest bg-primary hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/20"
+              >
+                Go to Hospital Center
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Metric Cards */}
         <div className="grid gap-4 md:gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 mb-8 md:mb-10">

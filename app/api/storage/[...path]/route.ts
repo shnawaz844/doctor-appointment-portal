@@ -29,19 +29,19 @@ export async function GET(
 
         // 1. Auth check: Session (web) OR API Key (mobile)
         const isPublicDoctorImage = bucket === "uploads" && key.startsWith("doctors/");
-        
+
         // Extract API Key from either headers or query parameters
         const { searchParams } = new URL(request.url);
         const queryApiKey = searchParams.get("apiKey");
         const headerApiKey = request.headers.get("x-api-key");
         const apiKey = queryApiKey || headerApiKey;
-        
-        const isValidApiKey = apiKey === (process.env.OPD_API_KEY || "pgf-opd-key-2026");
-        
+
+        const isValidApiKey = apiKey === (process.env.OPD_API_KEY || "doctor-portal-secure-2026");
+
         console.log(`[StorageProxy] Request for ${bucket}/${key}`);
         console.log(`[StorageProxy] Auth method: ${queryApiKey ? "query" : headerApiKey ? "header" : "none"}`);
         console.log(`[StorageProxy] isValidApiKey: ${isValidApiKey}`);
-        
+
         if (!isPublicDoctorImage && !isValidApiKey) {
             const session = await getAuthSession();
             console.log(`[StorageProxy] No valid API key, checking session... ${session ? "Found" : "Not Found"}`);
@@ -62,9 +62,9 @@ export async function GET(
         return NextResponse.redirect(signedUrl);
     } catch (error: any) {
         console.error("Storage Proxy Error:", error);
-        return NextResponse.json({ 
-            error: "Failed to generate access to file", 
-            details: error.message 
+        return NextResponse.json({
+            error: "Failed to generate access to file",
+            details: error.message
         }, { status: 500 });
     }
 }

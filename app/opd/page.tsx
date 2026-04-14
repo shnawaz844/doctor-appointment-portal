@@ -171,8 +171,11 @@ export default function OPDPage() {
             // Normalize mobile number for matching
             const normalizedPhone = formData.mobileNo.replace(/^\+91\s?/, "").replace(/\D/g, "")
 
-            // Check if patient exists, if not create one
+            // 1. Patient Sync
             let finalUhid = formData.uhidNo
+            const selectedDoctor = doctors.find(d => d.name === formData.consultant)
+            const doctorId = selectedDoctor?.id
+            const hospitalId = selectedDoctor?.hospital_id
 
             // Try to find patient by name and normalized phone
             const existingPatient = patients.find((p: any) => {
@@ -194,7 +197,7 @@ export default function OPDPage() {
             } else {
                 // Create a NEW patient record
                 if (!finalUhid) {
-                    const newPatientId = `P${Math.floor(1000 + Math.random() * 9000).toString()}`
+                    const newPatientId = `P${Math.floor(100000 + Math.random() * 900000).toString()}`
                     finalUhid = newPatientId
                 } else {
                     // If a UHID was manually entered, check if it's already used by someone else
@@ -216,6 +219,8 @@ export default function OPDPage() {
                     phone: formData.mobileNo,
                     diagnosis: "OPD Consultation",
                     doctor: formData.consultant,
+                    doctor_id: doctorId,
+                    hospital_id: hospitalId,
                     lastVisit: today,
                     reportType: "OPD",
                     year: now.getFullYear().toString(),
@@ -254,7 +259,9 @@ export default function OPDPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     ...formData,
-                    uhidNo: finalUhid
+                    uhidNo: finalUhid,
+                    doctor_id: doctorId,
+                    hospital_id: hospitalId
                 })
             })
 
@@ -265,8 +272,7 @@ export default function OPDPage() {
 
             // 3. Automatically book appointment
             try {
-                const selectedDoctor = doctors.find(d => d.name === formData.consultant)
-                const selectedSpecialty = specialties.find(s => s.id === selectedDoctor?.specialtyId)
+                const selectedSpecialty = specialties.find(s => s.id === selectedDoctor?.specialty_id || s.id === selectedDoctor?.specialtyId)
 
                 const appointmentPayload = {
                     id: `APT-${Math.floor(100000 + Math.random() * 900000)}`,
@@ -275,6 +281,8 @@ export default function OPDPage() {
                     date: today,
                     time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
                     doctor: formData.consultant,
+                    doctor_id: doctorId,
+                    hospital_id: hospitalId,
                     specialty: selectedSpecialty?.name || "General",
                     type: "OPD",
                     status: "Scheduled",
@@ -299,6 +307,7 @@ export default function OPDPage() {
             } catch (aptError) {
                 console.error("Error booking appointment:", aptError)
             }
+
 
             toast.success("Registration saved successfully")
             setTimeout(() => window.print(), 500)

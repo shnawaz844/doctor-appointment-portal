@@ -11,6 +11,11 @@ export async function GET() {
 
         let query = supabase.from("labresults").select("*").order("date", { ascending: false })
 
+        if (session.role !== "SUPER_ADMIN") {
+            if (!session.hospital_id) return NextResponse.json({ error: "No hospital assigned" }, { status: 403 })
+            query = query.eq("hospital_id", session.hospital_id)
+        }
+
         if (session.role === "DOCTOR") {
             query = query.ilike("doctor", session.name.trim())
         }
@@ -53,6 +58,7 @@ export async function POST(request: Request) {
             result: body.result || "Awaiting",
             interpretation: body.interpretation,
             values: body.values || [],
+            hospital_id: session.hospital_id || body.hospital_id,
         }
 
         const { data, error } = await supabase.from("labresults").insert(labData).select().single()

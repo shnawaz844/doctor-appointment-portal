@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
         const { data: user, error } = await supabase
             .from("users")
-            .select("id, name, email, role, password")
+            .select("id, name, email, role, password, hospital_id")
             .eq("email", email.toLowerCase().trim())
             .single()
 
@@ -29,8 +29,24 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
         }
 
+        let doctor_id = undefined
+        if (user.role === "DOCTOR") {
+            const { data: doctor, error: docError } = await supabase
+                .from("doctors")
+                .select("id, name")
+                .ilike("email", user.email.toLowerCase().trim())
+                .single()
+            
+            if (doctor) {
+                doctor_id = doctor.id
+                console.log(`Doctor linked: ${doctor.name} (${doctor_id}) for user ${user.email}`)
+            } else {
+                console.log(`No doctor record found matching email: ${user.email}`, docError)
+            }
+        }
+
         const token = jwt.sign(
-            { id: user.id, name: user.name, email: user.email, role: user.role },
+            { id: user.id, name: user.name, email: user.email, role: user.role, hospital_id: user.hospital_id, doctor_id },
             JWT_SECRET,
             { expiresIn: "1d" }
         )
@@ -45,7 +61,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
             message: "Login successful",
-            user: { id: user.id, name: user.name, email: user.email, role: user.role },
+            user: { id: user.id, name: user.name, email: user.email, role: user.role, hospital_id: user.hospital_id, doctor_id },
         })
     } catch (error: any) {
         console.error("Login error:", error)

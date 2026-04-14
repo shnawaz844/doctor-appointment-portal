@@ -11,8 +11,17 @@ export async function GET() {
 
         let query = supabase.from("appointments").select("*").order("created_at", { ascending: false })
 
+        if (session.role !== "SUPER_ADMIN") {
+            if (!session.hospital_id) return NextResponse.json({ error: "No hospital assigned" }, { status: 403 })
+            query = query.eq("hospital_id", session.hospital_id)
+        }
+
         if (session.role === "DOCTOR") {
-            query = query.ilike("doctor", session.name.trim())
+            if (session.doctor_id) {
+                query = query.or(`doctor_id.eq."${session.doctor_id}",doctor.ilike.%${session.name.trim()}%`)
+            } else {
+                query = query.ilike("doctor", session.name.trim())
+            }
         }
 
         const { data, error } = await query
@@ -45,14 +54,20 @@ export async function POST(request: Request) {
             phone: body.phone,
             unique_citizen_card_number: body.uniqueCitizenCardNumber || body.unique_citizen_card_number,
             notes: body.notes,
+            hospital_id: session.hospital_id || body.hospital_id,
+            doctor_id: body.doctor_id || body.doctorId,
         }
 
         const { data, error } = await supabase.from("appointments").insert(apptData).select().single()
         if (error) throw error
         return NextResponse.json(data, { status: 201 })
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to create appointment:", error)
-        return NextResponse.json({ error: "Failed to create appointment" }, { status: 500 })
+        return NextResponse.json({ 
+            error: "Failed to create appointment",
+            message: error.message || "Unknown database error",
+            details: error.details || error.hint
+        }, { status: 500 })
     }
 }
 

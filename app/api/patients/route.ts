@@ -15,10 +15,21 @@ export async function GET(request: Request) {
 
         let query = supabase.from("patients").select("*").order("created_at", { ascending: false })
 
+        if (session.role !== "SUPER_ADMIN") {
+            if (!session.hospital_id) {
+                return NextResponse.json({ error: "User is not assigned to any hospital" }, { status: 403 })
+            }
+            query = query.eq("hospital_id", session.hospital_id)
+        }
+
         if (cardNo) {
             query = query.eq("unique_citizen_card_number", cardNo)
         } else if (session.role === "DOCTOR" && !fetchAll) {
-            query = query.ilike("doctor", session.name.trim())
+            if (session.doctor_id) {
+                query = query.or(`doctor_id.eq."${session.doctor_id}",doctor.ilike.%${session.name.trim()}%`)
+            } else {
+                query = query.ilike("doctor", session.name.trim())
+            }
         }
 
         const { data: patients, error: pError } = await query
@@ -87,14 +98,20 @@ export async function POST(request: Request) {
             guardian_name: body.guardianName || body.guardian_name,
             unique_citizen_card_number: body.uniqueCitizenCardNumber || body.unique_citizen_card_number,
             created_by: session.id,
+            hospital_id: session.hospital_id || body.hospital_id,
+            doctor_id: body.doctor_id || body.doctorId,
         }
 
         const { data, error } = await supabase.from("patients").insert(patientData).select().single()
         if (error) throw error
         return NextResponse.json(data, { status: 201 })
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to create patient:", error)
-        return NextResponse.json({ error: "Failed to create patient" }, { status: 500 })
+        return NextResponse.json({ 
+            error: "Failed to create patient",
+            message: error.message || "Unknown database error",
+            details: error.details || error.hint
+        }, { status: 500 })
     }
 }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 
-const OPD_API_KEY = process.env.OPD_API_KEY || "pgf-opd-key-2026"
+const OPD_API_KEY = process.env.OPD_API_KEY || "doctor-portal-secure-2026"
 
 function validateApiKey(request: Request): boolean {
     const key = request.headers.get("x-api-key")

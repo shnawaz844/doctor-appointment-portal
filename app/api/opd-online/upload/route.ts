@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"
 
-const OPD_API_KEY = process.env.OPD_API_KEY || "pgf-opd-key-2026"
+const OPD_API_KEY = process.env.OPD_API_KEY || "doctor-portal-secure-2026"
 
 const s3Client = new S3Client({
     forcePathStyle: true,
@@ -64,13 +64,13 @@ export async function POST(request: Request) {
         // Generate secure internal proxy URL instead of public URL
         const proxyUrl = `/api/storage/${bucket}/${path}`
 
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: true,
-            url: proxyUrl, 
+            url: proxyUrl,
             path: `${bucket}/${path}`,
             filename: file.name
         }, { status: 200 })
-        
+
     } catch (error: any) {
         console.error("[POST /api/opd-online/upload] Error:", error)
         return NextResponse.json({

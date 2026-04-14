@@ -14,9 +14,18 @@ export async function GET(request: Request) {
 
         let query = supabase.from("opd").select("*").order("created_at", { ascending: false })
 
-        // Filter by consultant name if the user is a doctor
+        if (session.role !== "SUPER_ADMIN") {
+            if (!session.hospital_id) return NextResponse.json({ error: "No hospital assigned" }, { status: 403 })
+            query = query.eq("hospital_id", session.hospital_id)
+        }
+
+        // Filter by consultant name or doctor ID if the user is a doctor
         if (session.role === "DOCTOR") {
-            query = query.eq("consultant", session.name)
+            if (session.doctor_id) {
+                query = query.or(`doctor_id.eq."${session.doctor_id}",consultant.eq."${session.name}"`)
+            } else {
+                query = query.eq("consultant", session.name)
+            }
         }
 
         if (dateFilter) {
@@ -43,6 +52,7 @@ export async function POST(request: Request) {
 
         const body = await request.json()
         const opdData: any = {
+            id: body.id || `OPD-${Math.floor(100000 + Math.random() * 900000)}`,
             uhid_no: body.uhidNo || body.uhid_no,
             date: body.date,
             token_no: body.tokenNo || body.token_no,
@@ -57,13 +67,19 @@ export async function POST(request: Request) {
             patient_type: body.patientType || body.patient_type,
             unique_citizen_card_number: body.uniqueCitizenCardNumber || body.unique_citizen_card_number,
             created_by: session.id,
+            hospital_id: session.hospital_id || body.hospital_id,
+            doctor_id: body.doctor_id || body.doctorId,
         }
 
         const { data, error } = await supabase.from("opd").insert(opdData).select().single()
         if (error) throw error
         return NextResponse.json(data, { status: 201 })
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to create OPD registration:", error)
-        return NextResponse.json({ error: "Failed to create OPD registration" }, { status: 500 })
+        return NextResponse.json({ 
+            error: "Failed to create OPD registration",
+            message: error.message || "Unknown database error",
+            details: error.details || error.hint
+        }, { status: 500 })
     }
 }

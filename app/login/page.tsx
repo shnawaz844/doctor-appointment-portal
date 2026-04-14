@@ -34,7 +34,11 @@ export default function LoginPage() {
             const data = await res.json()
 
             if (res.ok) {
-                router.push("/")
+                if (data.user?.role === "SUPER_ADMIN") {
+                    router.push("/super-admin/hospitals")
+                } else {
+                    router.push("/")
+                }
                 router.refresh()
             } else {
                 setError(data.error || "Login failed")

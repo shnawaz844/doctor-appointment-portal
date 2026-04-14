@@ -6,11 +6,12 @@ import { getAuthSession } from "@/lib/auth"
 export async function POST(req: Request) {
     try {
         const session = await getAuthSession()
-        if (!session || session.role !== "ADMIN") {
+        if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
             return NextResponse.json({ error: "Unauthorized. Only administrators can create users." }, { status: 403 })
         }
 
-        const { name, email, password, role } = await req.json()
+        const { name, email, password, role, hospital_id } = await req.json()
+        const targetHospitalId = hospital_id || session.hospital_id
 
         if (!name || !email || !password) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -30,8 +31,14 @@ export async function POST(req: Request) {
 
         const { data: user, error } = await supabase
             .from("users")
-            .insert({ name, email: email.toLowerCase().trim(), password: hashedPassword, role: role || "STAFF" })
-            .select("id, name, email, role")
+            .insert({ 
+                name, 
+                email: email.toLowerCase().trim(), 
+                password: hashedPassword, 
+                role: role || "STAFF",
+                hospital_id: targetHospitalId 
+            })
+            .select("id, name, email, role, hospital_id")
             .single()
 
         if (error) throw error
@@ -44,6 +51,7 @@ export async function POST(req: Request) {
                 name: user.name,
                 email: user.email,
                 specialty_id: "General",
+                hospital_id: user.hospital_id
             })
         }
 

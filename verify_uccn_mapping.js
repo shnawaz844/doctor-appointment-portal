@@ -1,9 +1,9 @@
-require('dotenv').config({path: '.env.local'})
+require('dotenv').config({ path: '.env.local' })
 const { createClient } = require('@supabase/supabase-js')
 
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
 const API_URL = 'http://localhost:3000/api/opd-online'
-const API_KEY = 'pgf-opd-key-2026'
+const API_KEY = 'doctor-portal-secure-2026'
 
 async function verify() {
     const testCitizenId = 'TEST-UCCN-' + Date.now()
@@ -27,17 +27,17 @@ async function verify() {
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
-            headers: { 
+            headers: {
                 'x-api-key': API_KEY,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload)
         })
-        
+
         const data = await response.json()
         console.log('Booking response status:', response.status)
         console.log('Booking response data:', JSON.stringify(data, null, 2))
-        
+
         if (!response.ok) {
             throw new Error(data.error || 'Request failed')
         }
@@ -45,7 +45,7 @@ async function verify() {
         const { appointment } = data
 
         console.log('--- Verifying in Database ---')
-        
+
         // 1. Check Appointment
         const { data: appt } = await sb.from('appointments').select('*').eq('id', appointment.id).single()
         console.log('Appointment UCCN:', appt?.unique_citizen_card_number === testCitizenId ? '✅ OK' : '❌ FAIL (' + appt?.unique_citizen_card_number + ')')

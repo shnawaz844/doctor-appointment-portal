@@ -14,6 +14,11 @@ export async function GET(request: Request) {
 
         let query = supabase.from("prescriptions").select("*").order("created_at", { ascending: false })
 
+        if (session.role !== "SUPER_ADMIN") {
+            if (!session.hospital_id) return NextResponse.json({ error: "No hospital assigned" }, { status: 403 })
+            query = query.eq("hospital_id", session.hospital_id)
+        }
+
         if (patientId) {
             query = query.eq("patient_id", patientId)
         }
@@ -51,6 +56,7 @@ export async function POST(request: Request) {
             doctor_id: body.doctorId || body.doctor_id || session.id,
             instructions: body.instructions,
             duration: body.duration,
+            hospital_id: session.hospital_id || body.hospital_id,
         }
 
         const { data, error } = await supabase.from("prescriptions").insert(rxData).select().single()

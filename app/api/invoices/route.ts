@@ -9,7 +9,14 @@ export async function GET() {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        const { data, error } = await supabase.from("invoices").select("*").order("created_at", { ascending: false })
+        let query = supabase.from("invoices").select("*").order("created_at", { ascending: false })
+
+        if (session.role !== "SUPER_ADMIN") {
+            if (!session.hospital_id) return NextResponse.json({ error: "No hospital assigned" }, { status: 403 })
+            query = query.eq("hospital_id", session.hospital_id)
+        }
+
+        const { data, error } = await query
         if (error) throw error
         return NextResponse.json(data)
     } catch (error) {
@@ -38,6 +45,7 @@ export async function POST(req: Request) {
             status: body.status || "Pending",
             payment_method: body.paymentMethod || body.payment_method || "Cash",
             notes: body.notes,
+            hospital_id: session?.hospital_id || body.hospital_id,
         }
 
         const { data, error } = await supabase.from("invoices").insert(invoiceData).select().single()

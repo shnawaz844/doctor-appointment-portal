@@ -20,7 +20,31 @@ export default function SignupPage() {
         email: "",
         password: "",
         role: "STAFF",
+        hospital_id: "",
     })
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+    const [hospitals, setHospitals] = useState<any[]>([])
+
+    // Load hospitalId from query param if present
+    useEffect(() => {
+        const searchParams = new URLSearchParams(window.location.search)
+        const hId = searchParams.get("hospitalId")
+        if (hId) {
+            setFormData(prev => ({ ...prev, hospital_id: hId, role: "ADMIN" }))
+        }
+    }, [])
+
+    const fetchHospitals = async () => {
+        try {
+            const res = await fetch("/api/hospitals")
+            if (res.ok) {
+                const data = await res.json()
+                setHospitals(data)
+            }
+        } catch (err) {
+            console.error("Failed to fetch hospitals:", err)
+        }
+    }
 
     useEffect(() => {
         async function checkAdmin() {
@@ -29,8 +53,12 @@ export default function SignupPage() {
                 const res = await fetch("/api/auth/me")
                 if (res.ok) {
                     const data = await res.json()
-                    if (data.user.role !== "ADMIN") {
+                    if (data.user.role !== "ADMIN" && data.user.role !== "SUPER_ADMIN") {
                         router.push("/")
+                    }
+                    setIsSuperAdmin(data.user.role === "SUPER_ADMIN")
+                    if (data.user.role === "SUPER_ADMIN") {
+                        fetchHospitals()
                     }
                 } else {
                     router.push("/login")
@@ -163,6 +191,25 @@ export default function SignupPage() {
                                 />
                             </div>
                         </div>
+
+                        {isSuperAdmin && (
+                            <div className="space-y-2">
+                                <Label htmlFor="hospital">Assign to Hospital <span className="text-destructive">*</span></Label>
+                                <Select
+                                    value={formData.hospital_id}
+                                    onValueChange={(value) => setFormData({ ...formData, hospital_id: value })}
+                                >
+                                    <SelectTrigger className="bg-white/50 dark:bg-slate-900/50 border-white/20 dark:border-slate-800">
+                                        <SelectValue placeholder="Select Hospital" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {hospitals.map((h) => (
+                                            <SelectItem key={h.id} value={h.id}>{h.hospital_name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
 
 
                     </CardContent>

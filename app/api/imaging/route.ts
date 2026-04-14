@@ -11,6 +11,11 @@ export async function GET() {
 
         let query = supabase.from("imagingstudies").select("*").order("date", { ascending: false })
 
+        if (session.role !== "SUPER_ADMIN") {
+            if (!session.hospital_id) return NextResponse.json({ error: "No hospital assigned" }, { status: 403 })
+            query = query.eq("hospital_id", session.hospital_id)
+        }
+
         if (session.role === "DOCTOR") {
             query = query.ilike("doctor", session.name.trim())
         }
@@ -46,6 +51,7 @@ export async function POST(request: Request) {
             ai_flag: body.aiFlag || body.ai_flag,
             doctor: body.doctor || session.name,
             thumbnail: body.thumbnail || "/placeholder.svg",
+            hospital_id: session.hospital_id || body.hospital_id,
         }
 
         const { data, error } = await supabase.from("imagingstudies").insert(imgData).select().single()

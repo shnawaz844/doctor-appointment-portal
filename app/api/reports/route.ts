@@ -1,9 +1,19 @@
-import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
+import { getAuthSession } from "@/lib/auth"
 
 export async function GET() {
     try {
-        const { data, error } = await supabase.from("reports").select("*").order("date", { ascending: false })
+        const session = await getAuthSession()
+        if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+        let query = supabase.from("reports").select("*").order("date", { ascending: false })
+
+        if (session.role !== "SUPER_ADMIN") {
+            if (!session.hospital_id) return NextResponse.json({ error: "No hospital assigned" }, { status: 403 })
+            query = query.eq("hospital_id", session.hospital_id)
+        }
+
+        const { data, error } = await query
         if (error) throw error
         return NextResponse.json(data)
     } catch (error) {
@@ -14,6 +24,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
+        const session = await getAuthSession()
         const body = await request.json()
         const reportData = {
             id: body.id || `R-${Math.floor(10000 + Math.random() * 90000)}`,
@@ -22,6 +33,7 @@ export async function POST(request: Request) {
             name: body.name,
             date: body.date,
             path: body.path,
+            hospital_id: session?.hospital_id || body.hospital_id,
         }
         const { data, error } = await supabase.from("reports").insert(reportData).select().single()
         if (error) throw error

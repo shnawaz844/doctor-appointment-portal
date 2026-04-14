@@ -7,7 +7,9 @@ export interface AuthSession {
     id: string
     name: string
     email: string
-    role: "ADMIN" | "DOCTOR" | "STAFF"
+    role: "ADMIN" | "DOCTOR" | "STAFF" | "SUPER_ADMIN"
+    hospital_id?: string
+    doctor_id?: string
 }
 
 export async function getAuthSession(): Promise<AuthSession | null> {

@@ -1,9 +1,9 @@
-require('dotenv').config({path: '.env.local'})
+require('dotenv').config({ path: '.env.local' })
 const { createClient } = require('@supabase/supabase-js')
 
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
 const API_URL = 'http://localhost:3000/api/opd-online'
-const API_KEY = 'pgf-opd-key-2026'
+const API_KEY = 'doctor-portal-secure-2026'
 
 async function verify() {
     const testCitizenId = 'TEST-RX-FIX-' + Date.now()
@@ -27,16 +27,16 @@ async function verify() {
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
-            headers: { 
+            headers: {
                 'x-api-key': API_KEY,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload)
         })
-        
+
         const data = await response.json()
         console.log('Booking response status:', response.status)
-        
+
         if (!response.ok) {
             console.error('Data:', JSON.stringify(data, null, 2))
             throw new Error(data.error || 'Request failed')
@@ -47,7 +47,7 @@ async function verify() {
         console.log('UHID:', uhid)
 
         console.log('--- Verifying in Database ---')
-        
+
         // 1. Check Medical Records (Should have 1 record)
         const { data: records } = await sb.from('medicalrecords')
             .select('*')
@@ -68,7 +68,7 @@ async function verify() {
             console.log('Prescription Result: ✅ OK')
             console.log('Prescription ID:', rxData[0].id)
             console.log('Attachment URL:', rxData[0].attachment_url)
-            
+
             // Check if linked to appointment
             const { data: apptCheck } = await sb.from('appointments')
                 .select('prescription_id')

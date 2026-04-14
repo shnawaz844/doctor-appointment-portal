@@ -4,8 +4,8 @@ import { getAuthSession } from "@/lib/auth"
 
 const s3Client = new S3Client({
     forcePathStyle: true,
-    region: process.env.SUPABASE_S3_REGION || "ap-northeast-1",
-    endpoint: process.env.SUPABASE_S3_ENDPOINT || "https://ovfntwpehxejgwtcpifu.storage.supabase.co/storage/v1/s3",
+    region: process.env.SUPABASE_S3_REGION || "ap-southeast-1",
+    endpoint: process.env.SUPABASE_S3_ENDPOINT,
     credentials: {
         accessKeyId: process.env.SUPABASE_S3_ACCESS_KEY || "",
         secretAccessKey: process.env.SUPABASE_S3_SECRET_KEY || "",
