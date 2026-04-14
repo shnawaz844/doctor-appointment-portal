@@ -10,7 +10,7 @@ export async function GET() {
         if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
         let doctorQuery = supabase.from("doctors").select("*").order("name", { ascending: true })
-        
+
         if (session.role !== "SUPER_ADMIN") {
             if (!session.hospital_id) return NextResponse.json({ error: "No hospital assigned" }, { status: 403 })
             doctorQuery = doctorQuery.eq("hospital_id", session.hospital_id)
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
         let hospitalId = session?.hospital_id || body.hospital_id
 
         if (!hospitalId && session?.role !== "SUPER_ADMIN") {
-             return NextResponse.json({ error: "Hospital ID is required" }, { status: 400 })
+            return NextResponse.json({ error: "Hospital ID is required" }, { status: 400 })
         }
 
         // Check if doctor record already exists
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
         // Create or Link User record
         if (email && password) {
             const { data: existingUser, error: userFetchErr } = await supabase.from("users").select("id, role").eq("email", email).single()
-            
+
             if (existingUser) {
                 console.log("User already exists, linking to new doctor record:", existingUser.id)
                 // Optionally update role if needed
@@ -76,10 +76,10 @@ export async function POST(req: Request) {
             } else {
                 const hashedPassword = await bcrypt.hash(password, 10)
                 const { error: userErr } = await supabase.from("users").insert({
-                    name, 
-                    email, 
-                    password: hashedPassword, 
-                    role: "DOCTOR", 
+                    name,
+                    email,
+                    password: hashedPassword,
+                    role: "DOCTOR",
                     hospital_id: hospitalId
                 })
                 if (userErr) {

@@ -31,12 +31,12 @@ export async function POST(req: Request) {
 
         const { data: user, error } = await supabase
             .from("users")
-            .insert({ 
-                name, 
-                email: email.toLowerCase().trim(), 
-                password: hashedPassword, 
+            .insert({
+                name,
+                email: email.toLowerCase().trim(),
+                password: hashedPassword,
                 role: role || "STAFF",
-                hospital_id: targetHospitalId 
+                hospital_id: targetHospitalId
             })
             .select("id, name, email, role, hospital_id")
             .single()

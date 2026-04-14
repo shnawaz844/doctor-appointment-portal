@@ -23,7 +23,12 @@ import {
   Mail,
   Building,
   Lock,
+  Camera,
+  Loader2,
 } from "lucide-react"
+import { useRef } from "react"
+import { toast } from "sonner"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { usePathname, useRouter } from "next/navigation"
 import {
@@ -144,6 +149,8 @@ export function AppSidebar() {
   const { state } = useSidebar()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     async function fetchUser() {
@@ -168,6 +175,46 @@ export function AppSidebar() {
     await fetch("/api/auth/logout", { method: "POST" })
     router.push("/login")
     router.refresh()
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      
+      const uploadRes = await fetch("/api/doctors/upload", {
+        method: "POST",
+        body: formData,
+      })
+      
+      const uploadData = await uploadRes.json()
+      if (!uploadRes.ok) throw new Error(uploadData.error || "Upload failed")
+
+      const imageUrl = uploadData.url
+
+      const profileRes = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: imageUrl }),
+      })
+
+      if (!profileRes.ok) {
+        const errorData = await profileRes.json()
+        throw new Error(errorData.error || "Failed to update profile")
+      }
+
+      setUser({ ...user, image: imageUrl })
+      toast.success("Profile image updated successfully")
+    } catch (error: any) {
+      console.error("Image upload error:", error)
+      toast.error(error.message || "Failed to update profile image")
+    } finally {
+      setUploading(false)
+    }
   }
 
   const filteredNavItems = loading
@@ -313,8 +360,14 @@ export function AppSidebar() {
                           state === "collapsed" ? "w-10 h-10 p-0 justify-center" : "w-full"
                         )}
                       >
-                        <div className="h-8 w-8 shrink-0 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold border border-primary/20 shadow-inner group-hover:text-primary">
-                          {user.name.substring(0, 2).toUpperCase()}
+                        <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-primary/20 shadow-inner group-hover:text-primary">
+                          {user.image ? (
+                            <img src={user.image} alt={user.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="h-full w-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">
+                              {user.name.substring(0, 2).toUpperCase()}
+                            </div>
+                          )}
                         </div>
                         {state === "expanded" && (
                             <div className="flex flex-col items-start min-w-0 text-left animate-in fade-in slide-in-from-left-2 duration-300">
@@ -356,8 +409,37 @@ export function AppSidebar() {
                 </DialogHeader>
                 <div className="mt-6 space-y-6">
                   <div className="flex items-center gap-4 p-4 rounded-2xl bg-primary/5 border border-primary/10">
-                    <div className="h-16 w-16 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xl font-black shadow-lg">
-                      {user.name.substring(0, 2).toUpperCase()}
+                    <div className="relative group/avatar">
+                      <Avatar className="h-20 w-20 border-2 border-primary/20 shadow-xl transition-all duration-300 group-hover/avatar:border-primary/40">
+                        <AvatarImage src={user.image} className="object-cover" />
+                        <AvatarFallback className="bg-primary/10 text-primary text-2xl font-black">
+                          {user.name.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {user.role === "DOCTOR" && (
+                        <>
+                          <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleImageUpload}
+                            accept="image/*"
+                            className="hidden"
+                          />
+                          <Button
+                            size="icon"
+                            variant="secondary"
+                            className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full shadow-lg border border-primary/10 hover:bg-primary hover:text-white transition-all duration-300"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
+                          >
+                            {uploading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Camera className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </>
+                      )}
                     </div>
                     <div>
                       <h3 className="text-lg font-black text-foreground">{user.name}</h3>

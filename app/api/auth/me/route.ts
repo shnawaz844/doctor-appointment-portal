@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken"
 import { cookies } from "next/headers"
 import { supabase } from "@/lib/supabase"
 
-const JWT_SECRET = process.env.JWT_SECRET || "healthcare-secret-key-2026"
+const JWT_SECRET = process.env.JWT_SECRET || "doctor-portal-secure-2026"
 
 export async function GET() {
     try {
@@ -33,7 +33,7 @@ export async function GET() {
                 .select("hospital_name")
                 .eq("id", user.hospital_id)
                 .maybeSingle();
-            
+
             if (hospitalError) {
                 console.error("Error fetching hospital data:", hospitalError);
             }
@@ -44,35 +44,51 @@ export async function GET() {
         }
 
         let specialty = null;
+        let doctor_id = null;
+        let image = null;
+
         if (user.role === "DOCTOR") {
             const { data: doctorData, error: docError } = await supabase
                 .from("doctors")
-                .select("specialty_id")
-                .eq("email", user.email)
+                .select("id, specialty_id, image")
+                .ilike("email", user.email.trim())
                 .maybeSingle();
-            
+
             if (docError) {
-                console.error("Error fetching doctor data:", docError);
+                console.error("Error fetching doctor data in api/auth/me:", docError);
             }
 
-            if (doctorData?.specialty_id) {
-                const { data: specData, error: specError } = await supabase
-                    .from("specialties")
-                    .select("name")
-                    .eq("id", doctorData.specialty_id)
-                    .maybeSingle();
-                
-                if (specError) {
-                    console.error("Error fetching specialty data:", specError);
-                }
+            if (doctorData) {
+                doctor_id = doctorData.id;
+                image = doctorData.image;
 
-                if (specData) {
-                    specialty = specData.name;
+                if (doctorData.specialty_id) {
+                    const { data: specData, error: specError } = await supabase
+                        .from("specialties")
+                        .select("name")
+                        .eq("id", doctorData.specialty_id)
+                        .maybeSingle();
+
+                    if (specError) {
+                        console.error("Error fetching specialty data:", specError);
+                    }
+
+                    if (specData) {
+                        specialty = specData.name;
+                    }
                 }
             }
         }
 
-        return NextResponse.json({ user: { ...user, specialty, hospital_name } })
+        return NextResponse.json({
+            user: {
+                ...user,
+                specialty,
+                hospital_name,
+                doctor_id,
+                image
+            }
+        })
     } catch (error) {
         console.error("Auth Me error:", error)
         return NextResponse.json({ error: "Internal server error" }, { status: 500 })
