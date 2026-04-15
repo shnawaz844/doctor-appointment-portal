@@ -16,22 +16,36 @@ export async function GET() {
 
         const decoded: any = jwt.verify(token, JWT_SECRET)
 
-        const { data: user, error } = await supabase
+        let userQuery = await supabase
             .from("users")
-            .select("id, name, email, role, created_at, hospital_id")
+            .select("id, name, email, role, image, created_at, hospital_id")
             .eq("id", decoded.id)
             .single()
+
+        // Backward compatibility for databases where users.image has not been added yet.
+        if (userQuery.error?.message?.includes("column users.image does not exist")) {
+            userQuery = await supabase
+                .from("users")
+                .select("id, name, email, role, created_at, hospital_id")
+                .eq("id", decoded.id)
+                .single()
+        }
+
+        const { data: user, error } = userQuery
 
         if (error || !user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 })
         }
 
+        const effectiveRole = decoded.role || user.role
+        const effectiveHospitalId = decoded.hospital_id || user.hospital_id
+
         let hospital_name = null;
-        if (user.hospital_id) {
+        if (effectiveHospitalId) {
             const { data: hospitalData, error: hospitalError } = await supabase
                 .from("hospitals")
                 .select("hospital_name")
-                .eq("id", user.hospital_id)
+                .eq("id", effectiveHospitalId)
                 .maybeSingle();
 
             if (hospitalError) {
@@ -45,9 +59,9 @@ export async function GET() {
 
         let specialty = null;
         let doctor_id = null;
-        let image = null;
+        let image = (user as any).image || null;
 
-        if (user.role === "DOCTOR") {
+        if (effectiveRole === "DOCTOR") {
             const { data: doctorData, error: docError } = await supabase
                 .from("doctors")
                 .select("id, specialty_id, image")
@@ -60,7 +74,7 @@ export async function GET() {
 
             if (doctorData) {
                 doctor_id = doctorData.id;
-                image = doctorData.image;
+                image = doctorData.image || image;
 
                 if (doctorData.specialty_id) {
                     const { data: specData, error: specError } = await supabase
@@ -83,6 +97,8 @@ export async function GET() {
         return NextResponse.json({
             user: {
                 ...user,
+                role: effectiveRole,
+                hospital_id: effectiveHospitalId,
                 specialty,
                 hospital_name,
                 doctor_id,

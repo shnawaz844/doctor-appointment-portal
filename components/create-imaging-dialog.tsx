@@ -231,10 +231,14 @@ export function CreateImagingDialog({
                     setCurrentUser(user)
 
                     // Find specialty and doctor for current user
-                    let foundDoc = fetchedDoctors.find(d =>
-                        d.name.toLowerCase().trim() === user.name.toLowerCase().trim() ||
-                        d.email?.toLowerCase().trim() === user.email?.toLowerCase().trim()
-                    )
+                    const doctorEmail = user.email?.toLowerCase().trim();
+                    const doctorName = user.name?.toLowerCase().trim().replace(/^dr\.\s*/i, "");
+
+                    let foundDoc = fetchedDoctors.find(d => {
+                        const dEmail = d.email?.toLowerCase().trim();
+                        const dName = d.name?.toLowerCase().trim().replace(/^dr\.\s*/i, "");
+                        return (doctorEmail && dEmail === doctorEmail) || (doctorName && dName === doctorName);
+                    });
 
                     if (user.role === "DOCTOR" && foundDoc) {
                         const specName = (foundDoc as any).specialties?.name
@@ -243,6 +247,9 @@ export function CreateImagingDialog({
                         }
                         // Always prioritize current doctor if they are adding a study
                         setDoctor(foundDoc.name)
+                    } else if (user.role === "DOCTOR") {
+                         // Fallback to user name if doc not found in list but role is DOCTOR
+                         setDoctor(user.name)
                     } else {
                         // If not a doctor, use patient's doctor or current selection if valid
                         const pId = preselectedPatientId || patientId
@@ -250,9 +257,11 @@ export function CreateImagingDialog({
                         const targetDoctorName = currentPatient?.doctor || doctor || preselectedDoctor || ""
 
                         // Ensure the selected doctor exists in the list
-                        const validDoc = fetchedDoctors.find(d =>
-                            d.name.toLowerCase().trim() === targetDoctorName.toLowerCase().trim()
-                        )
+                        const validDoc = fetchedDoctors.find(d => {
+                            const dName = d.name.toLowerCase().trim().replace(/^dr\.\s*/i, "");
+                            const tName = targetDoctorName.toLowerCase().trim().replace(/^dr\.\s*/i, "");
+                            return dName === tName;
+                        })
                         if (validDoc) {
                             setDoctor(validDoc.name)
                         }
@@ -514,7 +523,7 @@ export function CreateImagingDialog({
                                             </div>
                                             <div className="space-y-2.5">
                                                 <Label htmlFor="doctor" className="text-xs font-bold text-slate-500 dark:text-slate-400">ASSIGN DOCTOR <span className="text-rose-500">*</span></Label>
-                                                <Select value={doctor} onValueChange={setDoctor}>
+                                                <Select value={doctor} onValueChange={setDoctor} disabled={currentUser?.role === "DOCTOR"}>
                                                     <SelectTrigger id="doctor" className="w-full h-12 rounded-2xl bg-white/50 dark:bg-slate-950/50 border-slate-200/60 dark:border-white/5">
                                                         <SelectValue placeholder="Select doctor" />
                                                     </SelectTrigger>

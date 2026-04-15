@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Plus, UserPlus, ImagePlus, X } from "lucide-react"
+import { Loader2, UserPlus, ImagePlus, X, Eye, EyeOff, Trash2 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { resolveImageUrl } from "@/lib/image-url"
 
 export default function DoctorsPage() {
     const [doctors, setDoctors] = useState<any[]>([])
@@ -19,7 +20,40 @@ export default function DoctorsPage() {
     const [imageFile, setImageFile] = useState<File | null>(null)
     const [imagePreview, setImagePreview] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [showPassword, setShowPassword] = useState(false)
+    const [doctorStatus, setDoctorStatus] = useState<"active" | "inactive">("active")
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const addDoctorCardRef = useRef<HTMLDivElement>(null)
+    const [syncedCardHeight, setSyncedCardHeight] = useState<number | null>(null)
+    const [isDesktop, setIsDesktop] = useState(false)
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia("(min-width: 768px)")
+        const updateViewport = () => setIsDesktop(mediaQuery.matches)
+        updateViewport()
+
+        if (mediaQuery.addEventListener) {
+            mediaQuery.addEventListener("change", updateViewport)
+            return () => mediaQuery.removeEventListener("change", updateViewport)
+        }
+
+        mediaQuery.addListener(updateViewport)
+        return () => mediaQuery.removeListener(updateViewport)
+    }, [])
+
+    useEffect(() => {
+        if (!addDoctorCardRef.current) return
+
+        const updateHeight = () => {
+            setSyncedCardHeight(addDoctorCardRef.current?.offsetHeight ?? null)
+        }
+
+        updateHeight()
+        const resizeObserver = new ResizeObserver(updateHeight)
+        resizeObserver.observe(addDoctorCardRef.current)
+
+        return () => resizeObserver.disconnect()
+    }, [])
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -42,7 +76,7 @@ export default function DoctorsPage() {
     const fetchData = async () => {
         try {
             const [docsRes, specsRes] = await Promise.all([
-                fetch("/api/doctors"),
+                fetch(`/api/doctors?status=${doctorStatus}`),
                 fetch("/api/specialties")
             ])
             const docsData = await docsRes.json()
@@ -58,7 +92,26 @@ export default function DoctorsPage() {
 
     useEffect(() => {
         fetchData()
-    }, [])
+    }, [doctorStatus])
+
+    const handleDeleteDoctor = async (doctorId: string, doctorName: string) => {
+        const isConfirmed = window.confirm(`Move ${doctorName} to inactive doctors?`)
+        if (!isConfirmed) return
+
+        try {
+            const res = await fetch(`/api/doctors?id=${doctorId}`, { method: "DELETE" })
+            const data = await res.json()
+
+            if (!res.ok) {
+                setError(data.error || "Failed to deactivate doctor")
+                return
+            }
+
+            fetchData()
+        } catch (e: any) {
+            setError(e.message || "Failed to deactivate doctor")
+        }
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -83,17 +136,7 @@ export default function DoctorsPage() {
                 }
             }
 
-            let specId = specialties.find(s => s.name.toLowerCase() === formData.specialty.trim().toLowerCase())?.id
-
-            if (!specId) {
-                const specRes = await fetch("/api/specialties", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name: formData.specialty.trim(), description: "Auto-created specialty" })
-                })
-                const newSpec = await specRes.json()
-                specId = newSpec.id
-            }
+            const specId = formData.specialty
 
             const res = await fetch("/api/doctors", {
                 method: "POST",
@@ -134,8 +177,8 @@ export default function DoctorsPage() {
             <div className="container mx-auto py-6 md:py-8 px-4 md:px-8">
                 <PageHeader title="Doctors" description="Manage medical staff" />
 
-                <div className="grid gap-6 md:grid-cols-2">
-                    <Card>
+                <div className="grid gap-6 md:grid-cols-2 md:items-start">
+                    <Card ref={addDoctorCardRef}>
                         <CardHeader>
                             <CardTitle>Add New Doctor</CardTitle>
                         </CardHeader>
@@ -153,19 +196,21 @@ export default function DoctorsPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="specialty">Specialty *</Label>
-                                    <Input
-                                        id="specialty"
-                                        list="specialties-list"
+                                    <Select
                                         value={formData.specialty}
-                                        onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
-                                        placeholder="Type or select specialty"
-                                        required
-                                    />
-                                    <datalist id="specialties-list">
-                                        {specialties.map(s => (
-                                            <option key={s.id} value={s.name} />
-                                        ))}
-                                    </datalist>
+                                        onValueChange={(value) => setFormData({ ...formData, specialty: value })}
+                                    >
+                                        <SelectTrigger id="specialty">
+                                            <SelectValue placeholder="Select specialty" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {specialties.map((s) => (
+                                                <SelectItem key={s.id} value={s.id}>
+                                                    {s.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
@@ -231,14 +276,25 @@ export default function DoctorsPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="password">Login Password *</Label>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        placeholder="Set password for doctor login"
-                                        required
-                                    />
+                                    <div className="relative">
+                                        <Input
+                                            id="password"
+                                            type={showPassword ? "text" : "password"}
+                                            value={formData.password}
+                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                            placeholder="Set password for doctor login"
+                                            className="pr-10"
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            aria-label={showPassword ? "Hide password" : "Show password"}
+                                            onClick={() => setShowPassword((prev) => !prev)}
+                                            className="absolute inset-y-0 right-0 flex items-center justify-center px-3 text-muted-foreground hover:text-foreground"
+                                        >
+                                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
+                                    </div>
                                 </div>
                                 {error && (
                                     <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg">
@@ -254,18 +310,37 @@ export default function DoctorsPage() {
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardHeader>
+                    <Card
+                        className="flex flex-col overflow-hidden"
+                        style={isDesktop && syncedCardHeight ? { height: `${syncedCardHeight}px` } : undefined}
+                    >
+                        <CardHeader className="space-y-3">
                             <CardTitle>Existing Doctors</CardTitle>
+                            <div className="inline-flex rounded-md border p-1 bg-muted/30">
+                                <button
+                                    type="button"
+                                    onClick={() => setDoctorStatus("active")}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${doctorStatus === "active" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                                >
+                                    Active
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setDoctorStatus("inactive")}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${doctorStatus === "inactive" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                                >
+                                    Inactive
+                                </button>
+                            </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="flex-1 min-h-0">
                             {loading ? (
                                 <div className="flex justify-center p-4">
                                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                                 </div>
                             ) : (
-                                <ScrollArea className="h-[400px] pr-4">
-                                    <div className="space-y-2">
+                                <ScrollArea className="h-full pr-4">
+                                    <div className="space-y-2 pb-2">
                                         {doctors.length === 0 ? (
                                             <p className="text-sm text-muted-foreground italic">No doctors found.</p>
                                         ) : (
@@ -273,8 +348,8 @@ export default function DoctorsPage() {
                                                 <div key={d.id} className="flex items-center justify-between p-3 border rounded-lg">
                                                     <div className="flex items-center gap-3">
                                                         <div className="h-10 w-10 rounded-full overflow-hidden bg-muted shrink-0">
-                                                            {d.image ? (
-                                                                <img src={d.image} alt={d.name} className="h-full w-full object-cover" />
+                                                            {resolveImageUrl(d.image) ? (
+                                                                <img src={resolveImageUrl(d.image)} alt={d.name} className="h-full w-full object-cover" />
                                                             ) : (
                                                                 <div className="h-full w-full flex items-center justify-center bg-primary/10 text-primary font-bold">
                                                                     {d.name.charAt(0)}
@@ -287,6 +362,17 @@ export default function DoctorsPage() {
                                                             <p className="text-xs text-muted-foreground">{d.email || d.phone || "No contact info"}</p>
                                                         </div>
                                                     </div>
+                                                    {doctorStatus === "active" && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDeleteDoctor(d.id, d.name)}
+                                                            className="p-2 rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+                                                            aria-label={`Delete ${d.name}`}
+                                                            title="Move to inactive"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             ))
                                         )}

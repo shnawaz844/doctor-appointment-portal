@@ -33,6 +33,7 @@ export function CreateAppointmentDialog({ children, onSuccess, preselectedPatien
 
   const [doctors, setDoctors] = useState<any[]>([])
   const [specialties, setSpecialties] = useState<any[]>([])
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -52,6 +53,9 @@ export function CreateAppointmentDialog({ children, onSuccess, preselectedPatien
             userRes.json()
           ])
           setPatients(Array.isArray(patientsData) ? patientsData : [])
+          if (userData?.user) {
+            setCurrentUser(userData.user)
+          }
           if (preselectedPatientId && Array.isArray(patientsData)) {
             const matched = patientsData.find((p: any) => p.id === preselectedPatientId || p._id === preselectedPatientId)
             if (matched) {
@@ -64,14 +68,28 @@ export function CreateAppointmentDialog({ children, onSuccess, preselectedPatien
           setSpecialties(specialtiesArray)
 
           if (userData?.user?.role === "DOCTOR") {
-            const doctorName = userData.user.name
-            const foundDoctor = doctorsArray.find(d => d.name === doctorName)
+            const user = userData.user;
+            const doctorEmail = user.email?.toLowerCase().trim();
+            const doctorName = user.name?.toLowerCase().trim().replace(/^dr\.\s*/i, "");
+
+            const foundDoctor = doctorsArray.find(d => {
+              const dEmail = d.email?.toLowerCase().trim();
+              const dName = d.name?.toLowerCase().trim().replace(/^dr\.\s*/i, "");
+              return (doctorEmail && dEmail === doctorEmail) || (doctorName && dName === doctorName);
+            });
+
             if (foundDoctor) {
               const spec = specialtiesArray.find(s => s.id === foundDoctor.specialty_id)
               setFormData(prev => ({
                 ...prev,
-                doctor: doctorName,
+                doctor: foundDoctor.name,
                 specialty: spec ? spec.name : ""
+              }))
+            } else {
+              // Fallback to user name
+              setFormData(prev => ({
+                ...prev,
+                doctor: user.name
               }))
             }
           }
@@ -307,7 +325,7 @@ export function CreateAppointmentDialog({ children, onSuccess, preselectedPatien
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="doctor" className="text-xs font-bold text-slate-700 dark:text-slate-300">Doctor *</Label>
-                <Select value={formData.doctor} onValueChange={handleDoctorChange}>
+                <Select value={formData.doctor} onValueChange={handleDoctorChange} disabled={currentUser?.role === "DOCTOR"}>
                   <SelectTrigger id="doctor" className="w-full h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
                     <SelectValue placeholder="Select doctor" />
                   </SelectTrigger>

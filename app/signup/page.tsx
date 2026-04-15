@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { Activity, Loader2, Mail, Lock, User, Building, AlertCircle, ChevronRight } from "lucide-react"
+import { Activity, Loader2, Mail, Lock, User, Building, AlertCircle, ChevronRight, ArrowLeft } from "lucide-react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function SignupPage() {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const selectedHospitalId = searchParams.get("hospitalId") ?? searchParams.get("hospitalid") ?? ""
+    const selectedHospitalNameFromQuery = searchParams.get("hospitalName") ?? searchParams.get("hospitalname") ?? ""
+    const isHospitalInviteFlow = selectedHospitalId.length > 0
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
     const [formData, setFormData] = useState({
@@ -25,14 +29,10 @@ export default function SignupPage() {
     const [isSuperAdmin, setIsSuperAdmin] = useState(false)
     const [hospitals, setHospitals] = useState<any[]>([])
 
-    // Load hospitalId from query param if present
     useEffect(() => {
-        const searchParams = new URLSearchParams(window.location.search)
-        const hId = searchParams.get("hospitalId")
-        if (hId) {
-            setFormData(prev => ({ ...prev, hospital_id: hId, role: "ADMIN" }))
-        }
-    }, [])
+        if (!selectedHospitalId) return
+        setFormData(prev => ({ ...prev, hospital_id: selectedHospitalId, role: "ADMIN" }))
+    }, [selectedHospitalId])
 
     const fetchHospitals = async () => {
         try {
@@ -73,16 +73,23 @@ export default function SignupPage() {
         checkAdmin()
     }, [router])
 
+    const selectedHospital = hospitals.find((hospital) => hospital.id === formData.hospital_id)
+    const selectedHospitalName = selectedHospitalNameFromQuery || selectedHospital?.hospital_name || "Selected hospital"
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
         setError("")
 
         try {
+            const payload = isHospitalInviteFlow
+                ? { ...formData, role: "ADMIN", hospital_id: selectedHospitalId }
+                : formData
+
             const res = await fetch("/api/auth/signup", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(payload),
             })
 
             const data = await res.json()
@@ -108,6 +115,18 @@ export default function SignupPage() {
 
             <Card className="w-full max-w-md border-none glass-premium animate-in fade-in slide-in-from-bottom-8 duration-700">
                 <CardHeader className="space-y-2 text-center">
+                    <div className="flex justify-start">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="px-2"
+                            onClick={() => router.back()}
+                        >
+                            <ArrowLeft className="h-4 w-4 mr-1" />
+                            Back
+                        </Button>
+                    </div>
                     <div className="flex justify-center mb-4">
                         <div className="p-3 bg-primary/10 rounded-2xl">
                             <Activity className="h-8 w-8 text-primary animate-pulse" />
@@ -144,19 +163,26 @@ export default function SignupPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="role">Role</Label>
-                                <Select
-                                    value={formData.role}
-                                    onValueChange={(value) => setFormData({ ...formData, role: value })}
-                                >
-                                    <SelectTrigger className="bg-white/50 dark:bg-slate-900/50 border-white/20 dark:border-slate-800">
-                                        <SelectValue placeholder="Select Role" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="ADMIN">Administrator</SelectItem>
-                                        <SelectItem value="DOCTOR">Doctor</SelectItem>
-                                        <SelectItem value="STAFF">Staff</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                {isHospitalInviteFlow ? (
+                                    <div className="h-10 px-3 rounded-md border border-white/20 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 flex items-center gap-2 text-sm text-foreground">
+                                        <User className="h-4 w-4 text-muted-foreground" />
+                                        <span>Admin</span>
+                                    </div>
+                                ) : (
+                                    <Select
+                                        value={formData.role}
+                                        onValueChange={(value) => setFormData({ ...formData, role: value })}
+                                    >
+                                        <SelectTrigger className="bg-white/50 dark:bg-slate-900/50 border-white/20 dark:border-slate-800">
+                                            <SelectValue placeholder="Select Role" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ADMIN">Administrator</SelectItem>
+                                            <SelectItem value="DOCTOR">Doctor</SelectItem>
+                                            <SelectItem value="STAFF">Staff</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )}
                             </div>
                         </div>
 
@@ -192,7 +218,7 @@ export default function SignupPage() {
                             </div>
                         </div>
 
-                        {isSuperAdmin && (
+                        {isSuperAdmin && !isHospitalInviteFlow && (
                             <div className="space-y-2">
                                 <Label htmlFor="hospital">Assign to Hospital <span className="text-destructive">*</span></Label>
                                 <Select
@@ -208,6 +234,15 @@ export default function SignupPage() {
                                         ))}
                                     </SelectContent>
                                 </Select>
+                            </div>
+                        )}
+                        {isSuperAdmin && isHospitalInviteFlow && (
+                            <div className="space-y-2">
+                                <Label>Assigned Hospital <span className="text-destructive">*</span></Label>
+                                <div className="h-10 px-3 rounded-md border border-white/20 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 flex items-center gap-2 text-sm text-foreground">
+                                    <Building className="h-4 w-4 text-muted-foreground" />
+                                    <span>{selectedHospitalName}</span>
+                                </div>
                             </div>
                         )}
 
@@ -230,12 +265,6 @@ export default function SignupPage() {
                                 </>
                             )}
                         </Button>
-                        <p className="text-center text-sm text-slate-500 dark:text-slate-400">
-                            Already have an account?{" "}
-                            <Link href="/login" className="font-bold text-primary hover:underline transition-all">
-                                Sign in
-                            </Link>
-                        </p>
                     </CardFooter>
                 </form>
             </Card>

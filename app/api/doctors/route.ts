@@ -3,17 +3,23 @@ import { supabase } from "@/lib/supabase"
 import bcrypt from "bcryptjs"
 import { getAuthSession, hasRole } from "@/lib/auth"
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
-
         const session = await getAuthSession()
         if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+        const status = new URL(req.url).searchParams.get("status")
         let doctorQuery = supabase.from("doctors").select("*").order("name", { ascending: true })
 
         if (session.role !== "SUPER_ADMIN") {
             if (!session.hospital_id) return NextResponse.json({ error: "No hospital assigned" }, { status: 403 })
             doctorQuery = doctorQuery.eq("hospital_id", session.hospital_id)
+        }
+
+        if (status === "inactive") {
+            doctorQuery = doctorQuery.eq("is_active", false)
+        } else {
+            doctorQuery = doctorQuery.eq("is_active", true)
         }
 
         const [{ data: doctors, error: dErr }, { data: specialties, error: sErr }] = await Promise.all([
@@ -96,7 +102,8 @@ export async function POST(req: Request) {
             phone,
             email,
             image,
-            hospital_id: hospitalId
+            hospital_id: hospitalId,
+            is_active: true
         }).select().single()
 
         if (error) {
@@ -110,5 +117,41 @@ export async function POST(req: Request) {
     } catch (error: any) {
         console.error("Failed to create doctor (generic error):", error)
         return NextResponse.json({ error: error.message || "Failed to create doctor" }, { status: 500 })
+    }
+}
+
+export async function DELETE(req: Request) {
+    try {
+        const session = await getAuthSession()
+        if (!session || !hasRole(session, ["ADMIN", "SUPER_ADMIN"])) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        }
+
+        const { searchParams } = new URL(req.url)
+        const doctorId = searchParams.get("id")
+
+        if (!doctorId) {
+            return NextResponse.json({ error: "Doctor ID is required" }, { status: 400 })
+        }
+
+        let deleteQuery = supabase
+            .from("doctors")
+            .update({ is_active: false })
+            .eq("id", doctorId)
+
+        if (session.role !== "SUPER_ADMIN") {
+            if (!session.hospital_id) return NextResponse.json({ error: "No hospital assigned" }, { status: 403 })
+            deleteQuery = deleteQuery.eq("hospital_id", session.hospital_id)
+        }
+
+        const { error } = await deleteQuery
+        if (error) {
+            return NextResponse.json({ error: error.message }, { status: 400 })
+        }
+
+        return NextResponse.json({ success: true })
+    } catch (error: any) {
+        console.error("Failed to deactivate doctor:", error)
+        return NextResponse.json({ error: error.message || "Failed to deactivate doctor" }, { status: 500 })
     }
 }

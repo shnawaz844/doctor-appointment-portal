@@ -118,15 +118,14 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
         if (authData.user.role === "DOCTOR") {
           // Try matching by email first, then by name (more robust than strict equality)
           const doctorEmail = authData.user.email?.toLowerCase().trim();
-          const doctorName = authData.user.name?.toLowerCase().trim();
+          const doctorName = authData.user.name?.toLowerCase().trim().replace(/^dr\.\s*/i, "");
           
           const doc = fetchedDoctors.find(d => {
             const dEmail = d.email?.toLowerCase().trim();
-            const dName = d.name?.toLowerCase().trim();
+            const dName = d.name?.toLowerCase().trim().replace(/^dr\.\s*/i, "");
             
             return (doctorEmail && dEmail === doctorEmail) || 
-                   (doctorName && dName === doctorName) ||
-                   (doctorName && dName && (dName.includes(doctorName) || doctorName.includes(dName)));
+                   (doctorName && dName === doctorName);
           });
           
           if (doc) {

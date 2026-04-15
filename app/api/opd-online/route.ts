@@ -186,6 +186,7 @@ export async function POST(request: Request) {
             address: address || "PGF Area",
             patient_type: "Online Client",
             unique_citizen_card_number: citizenId,
+            doctor_id: doctorId,
         }
 
         const { error: oError } = await supabase.from("opd").insert(opdData)
@@ -207,6 +208,7 @@ export async function POST(request: Request) {
             status: "Scheduled",
             phone: phone || null,
             notes: notes ? `${notes}\n\n[Booked From PGF APP]` : "[Booked From PGF APP]",
+            doctor_id: doctorId,
         }
 
         const { data: finalAppt, error: aError } = await supabase

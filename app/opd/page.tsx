@@ -78,14 +78,17 @@ export default function OPDPage() {
 
                 const [patientsRes, doctorsRes, specialtiesRes] = await Promise.all([
                     fetch("/api/patients?all=true"),
-                    fetch("/api/doctors"),
+                    fetch("/api/doctors?status=active"),
                     fetch("/api/specialties")
                 ])
                 const patientsData = await patientsRes.json()
                 const doctorsData = await doctorsRes.json()
                 const specialtiesData = await specialtiesRes.json()
                 setPatients(Array.isArray(patientsData) ? patientsData : [])
-                setDoctors(Array.isArray(doctorsData) ? doctorsData : [])
+                const activeDoctors = Array.isArray(doctorsData)
+                    ? doctorsData.filter((d: any) => d?.is_active !== false)
+                    : []
+                setDoctors(activeDoctors)
                 setSpecialties(Array.isArray(specialtiesData) ? specialtiesData : [])
             } catch (error) {
                 console.error("Failed to fetch initial data:", error)

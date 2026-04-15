@@ -75,8 +75,18 @@ export function CreateMedicalRecordDialog({ children, onCreated, preselectedPati
                         const authData = await authRes.json()
                         setCurrentUser(authData.user)
                         if (authData.user.role === "DOCTOR") {
-                            // The name from user matches Doctor name
-                            const doc = fetchedDoctors.find(d => d.name === authData.user.name)
+                            // Try matching by email first, then by name (more robust than strict equality)
+                            const doctorEmail = authData.user.email?.toLowerCase().trim();
+                            const doctorName = authData.user.name?.toLowerCase().trim().replace(/^dr\.\s*/i, "");
+
+                            const doc = fetchedDoctors.find(d => {
+                                const dEmail = d.email?.toLowerCase().trim();
+                                const dName = d.name?.toLowerCase().trim().replace(/^dr\.\s*/i, "");
+
+                                return (doctorEmail && dEmail === doctorEmail) ||
+                                    (doctorName && dName === doctorName);
+                            });
+
                             if (doc) {
                                 setSelectedDoctorName(doc.name)
                             } else {
@@ -170,6 +180,7 @@ export function CreateMedicalRecordDialog({ children, onCreated, preselectedPati
                     attachment_url,
                     attachment_type,
                     date: new Date().toISOString().split("T")[0],
+                    unique_citizen_card_number: (patient as any).unique_citizen_card_number,
                 }),
             })
             if (res.ok) {
@@ -177,6 +188,9 @@ export function CreateMedicalRecordDialog({ children, onCreated, preselectedPati
                 resetForm()
                 router.refresh()
                 onCreated?.()
+            } else {
+                const errorData = await res.json()
+                alert(`Error: ${errorData.message || errorData.error || "Failed to save medical record"}`)
             }
         } catch (error) {
             console.error("Failed to create medical record:", error)

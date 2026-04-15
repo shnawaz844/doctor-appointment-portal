@@ -54,6 +54,7 @@ import { Button } from "@/components/ui/button"
 import { ChangePasswordDialog } from "@/components/change-password-dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ModeToggle } from "@/components/mode-toggle"
+import { resolveImageUrl } from "@/lib/image-url"
 
 const navItems = [
   {
@@ -186,7 +187,7 @@ export function AppSidebar() {
       const formData = new FormData()
       formData.append("file", file)
       
-      const uploadRes = await fetch("/api/doctors/upload", {
+      const uploadRes = await fetch("/api/auth/profile/image", {
         method: "POST",
         body: formData,
       })
@@ -194,18 +195,7 @@ export function AppSidebar() {
       const uploadData = await uploadRes.json()
       if (!uploadRes.ok) throw new Error(uploadData.error || "Upload failed")
 
-      const imageUrl = uploadData.url
-
-      const profileRes = await fetch("/api/auth/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: imageUrl }),
-      })
-
-      if (!profileRes.ok) {
-        const errorData = await profileRes.json()
-        throw new Error(errorData.error || "Failed to update profile")
-      }
+      const imageUrl = uploadData.imageUrl || uploadData.url
 
       setUser({ ...user, image: imageUrl })
       toast.success("Profile image updated successfully")
@@ -214,12 +204,14 @@ export function AppSidebar() {
       toast.error(error.message || "Failed to update profile image")
     } finally {
       setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
     }
   }
 
   const filteredNavItems = loading
     ? []
     : navItems.filter((item) => user && item.roles.includes(user.role.toUpperCase()))
+  const profileImage = resolveImageUrl(user?.image)
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar shadow-xl">
@@ -361,8 +353,8 @@ export function AppSidebar() {
                         )}
                       >
                         <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-primary/20 shadow-inner group-hover:text-primary">
-                          {user.image ? (
-                            <img src={user.image} alt={user.name} className="h-full w-full object-cover" />
+                          {profileImage ? (
+                            <img src={profileImage} alt={user.name} className="h-full w-full object-cover" />
                           ) : (
                             <div className="h-full w-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">
                               {user.name.substring(0, 2).toUpperCase()}
@@ -411,35 +403,33 @@ export function AppSidebar() {
                   <div className="flex items-center gap-4 p-4 rounded-2xl bg-primary/5 border border-primary/10">
                     <div className="relative group/avatar">
                       <Avatar className="h-20 w-20 border-2 border-primary/20 shadow-xl transition-all duration-300 group-hover/avatar:border-primary/40">
-                        <AvatarImage src={user.image} className="object-cover" />
+                        <AvatarImage src={profileImage} className="object-cover" />
                         <AvatarFallback className="bg-primary/10 text-primary text-2xl font-black">
                           {user.name.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      {user.role === "DOCTOR" && (
-                        <>
-                          <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleImageUpload}
-                            accept="image/*"
-                            className="hidden"
-                          />
-                          <Button
-                            size="icon"
-                            variant="secondary"
-                            className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full shadow-lg border border-primary/10 hover:bg-primary hover:text-white transition-all duration-300"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploading}
-                          >
-                            {uploading ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Camera className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </>
-                      )}
+                      <>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={handleImageUpload}
+                          accept="image/*"
+                          className="hidden"
+                        />
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full shadow-lg border border-primary/10 hover:bg-primary hover:text-white transition-all duration-300"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploading}
+                        >
+                          {uploading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Camera className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </>
                     </div>
                     <div>
                       <h3 className="text-lg font-black text-foreground">{user.name}</h3>

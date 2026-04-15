@@ -15,7 +15,11 @@ export async function GET(request: Request) {
 
         let query = supabase.from("patients").select("*").order("created_at", { ascending: false })
 
-        if (session.role !== "SUPER_ADMIN") {
+        if (session.role === "SUPER_ADMIN") {
+            if (session.hospital_id) {
+                query = query.eq("hospital_id", session.hospital_id)
+            }
+        } else {
             if (!session.hospital_id) {
                 return NextResponse.json({ error: "User is not assigned to any hospital" }, { status: 403 })
             }

@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken"
 import { cookies } from "next/headers"
 
-const JWT_SECRET = process.env.JWT_SECRET || "healthcare-secret-key-2026"
+const JWT_SECRET = process.env.JWT_SECRET || "doctor-portal-secure-2026"
 
 export interface AuthSession {
     id: string

@@ -131,7 +131,11 @@ export default function HospitalsPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <Link href={`/signup?hospitalId=${hospital.id}`}>
+                              <Link
+                                href={`/signup?hospitalId=${hospital.id}&hospitalName=${encodeURIComponent(
+                                  hospital.hospital_name
+                                )}`}
+                              >
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
