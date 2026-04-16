@@ -43,6 +43,7 @@ export async function POST(request: Request) {
             prescriptions = [], // Array of URLs
             imaging = [], // Array of URLs
             appointmentType, // Optional, defaults to "OPD"
+            hospitalId,
         } = body
 
         if (!patientName || !date || !time || !citizenId) {
@@ -187,6 +188,7 @@ export async function POST(request: Request) {
             patient_type: "Online Client",
             unique_citizen_card_number: citizenId,
             doctor_id: doctorId,
+            hospital_id: hospitalId,
         }
 
         const { error: oError } = await supabase.from("opd").insert(opdData)
@@ -209,6 +211,7 @@ export async function POST(request: Request) {
             phone: phone || null,
             notes: notes ? `${notes}\n\n[Booked From PGF APP]` : "[Booked From PGF APP]",
             doctor_id: doctorId,
+            hospital_id: hospitalId,
         }
 
         const { data: finalAppt, error: aError } = await supabase
