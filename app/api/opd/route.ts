@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { getAuthSession } from "@/lib/auth"
+import { formatPhoneWithPrefix } from "@/lib/phone"
 
 export async function GET(request: Request) {
     try {
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
             age_sex: body.age && body.sex ? `${body.age} / ${body.sex}` : (body.ageSex || body.age_sex),
             opd_no: body.opdNo || body.opd_no,
             guardian_name: body.guardianName || body.guardian_name,
-            mobile_no: body.mobileNo || body.mobile_no,
+            mobile_no: formatPhoneWithPrefix(body.mobileNo || body.mobile_no),
             valid_upto: body.validUpto || body.valid_upto,
             consultant: body.consultant,
             address: body.address,

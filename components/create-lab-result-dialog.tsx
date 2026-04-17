@@ -19,7 +19,12 @@ import {
   TestTube2,
   Calendar,
   ChevronRight,
-  Info
+  Info,
+  Loader2,
+  Upload,
+  FileIcon,
+  ImageIcon,
+  X
 } from "lucide-react"
 
 interface CreateLabResultDialogProps {
@@ -40,25 +45,114 @@ export function CreateLabResultDialog({ children, onCreated }: CreateLabResultDi
   const [notes, setNotes] = useState("")
   const [patients, setPatients] = useState<any[]>([])
   const [doctors, setDoctors] = useState<any[]>([])
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [fetchingData, setFetchingData] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [filePreview, setFilePreview] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     if (open) {
+      setFetchingData(true)
       Promise.all([
         fetch("/api/patients").then((res) => res.json()),
-        fetch("/api/doctors").then((res) => res.json())
+        fetch("/api/doctors").then((res) => res.json()),
+        fetch("/api/auth/me").then((res) => res.json())
       ])
-        .then(([patientsData, doctorsData]) => {
+        .then(([patientsData, doctorsData, authData]) => {
           if (Array.isArray(patientsData)) setPatients(patientsData)
-          if (Array.isArray(doctorsData)) setDoctors(doctorsData)
+          
+          let fetchedDoctors: any[] = []
+          if (Array.isArray(doctorsData)) {
+            fetchedDoctors = doctorsData
+            setDoctors(doctorsData)
+          }
+
+          if (authData?.user) {
+            setCurrentUser(authData.user)
+            if (authData.user.role === "DOCTOR") {
+              const doctorEmail = authData.user.email?.toLowerCase().trim();
+              const doctorNameClean = authData.user.name?.toLowerCase().trim().replace(/^dr\.\s*/i, "");
+
+              const matchedDoc = fetchedDoctors.find(d => {
+                const dEmail = d.email?.toLowerCase().trim();
+                const dName = d.name?.toLowerCase().trim().replace(/^dr\.\s*/i, "");
+                return (doctorEmail && dEmail === doctorEmail) || (doctorNameClean && dName === doctorNameClean);
+              });
+
+              if (matchedDoc) {
+                setDoctorName(matchedDoc.name)
+              } else {
+                setDoctorName(authData.user.name)
+              }
+            }
+          }
         })
         .catch(console.error)
+        .finally(() => setFetchingData(false))
     }
   }, [open])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null
+    setSelectedFile(file)
+    if (file) {
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader()
+        reader.onloadend = () => setFilePreview(reader.result as string)
+        reader.readAsDataURL(file)
+      } else {
+        setFilePreview(null)
+      }
+    } else {
+      setFilePreview(null)
+    }
+  }
+
+  const resetForm = () => {
+    setPatientName("")
+    setPatientId("")
+    setDoctorName("")
+    setTestName("")
+    setTestType("")
+    setStatus("Pending")
+    setResult("Awaiting")
+    setNotes("")
+    setSelectedFile(null)
+    setFilePreview(null)
+  }
 
   const handleSubmit = async () => {
     if (!patientName || !patientId || !testName || !doctorName) return
     setLoading(true)
+    setUploading(true)
     try {
+      let attachment_url = ""
+      let attachment_type = ""
+
+      if (selectedFile) {
+        const formData = new FormData()
+        formData.append("file", selectedFile)
+        formData.append("bucket", "uploads")
+        formData.append("patientId", patientId || "lab-anonymous")
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        })
+
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json()
+          attachment_url = uploadData.url
+          attachment_type = selectedFile.type
+        } else {
+          alert("Failed to upload attachment. Please try again.")
+          setLoading(false)
+          setUploading(false)
+          return
+        }
+      }
+
       const res = await fetch("/api/lab-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,25 +165,21 @@ export function CreateLabResultDialog({ children, onCreated }: CreateLabResultDi
           status,
           result,
           interpretation: notes,
+          attachment_url,
+          attachment_type,
           date: new Date().toISOString().split("T")[0],
         }),
       })
       if (res.ok) {
         setOpen(false)
-        setPatientName("")
-        setPatientId("")
-        setDoctorName("")
-        setTestName("")
-        setTestType("")
-        setStatus("Pending")
-        setResult("Awaiting")
-        setNotes("")
+        resetForm()
         onCreated?.()
       }
     } catch (error) {
       console.error("Failed to create lab result:", error)
     } finally {
       setLoading(false)
+      setUploading(false)
     }
   }
 
@@ -111,7 +201,13 @@ export function CreateLabResultDialog({ children, onCreated }: CreateLabResultDi
           </div>
         </DialogHeader>
 
-        <div className="flex flex-col h-[calc(90vh-160px)]">
+        {fetchingData ? (
+          <div className="flex flex-col items-center justify-center py-24 space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <p className="font-bold text-slate-400 animate-pulse uppercase tracking-[0.2em] text-[10px]">Loading clinical data...</p>
+          </div>
+        ) : (
+          <div className="flex flex-col h-[calc(90vh-160px)]">
           <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
@@ -140,7 +236,9 @@ export function CreateLabResultDialog({ children, onCreated }: CreateLabResultDi
                         if (patient) {
                           setPatientName(patient.name)
                           setPatientId(patient.id || patient._id || "")
-                          setDoctorName(patient.doctor || "")
+                          if (currentUser?.role !== "DOCTOR") {
+                            setDoctorName(patient.doctor || "")
+                          }
                         }
                       }}
                     >
@@ -164,7 +262,11 @@ export function CreateLabResultDialog({ children, onCreated }: CreateLabResultDi
                     <Label htmlFor="doctorName" className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2">
                       ATTENDING DOCTOR <span className="text-rose-500">*</span>
                     </Label>
-                    <Select value={doctorName} onValueChange={setDoctorName}>
+                    <Select 
+                      value={doctorName} 
+                      onValueChange={setDoctorName}
+                      disabled={currentUser?.role === "DOCTOR"}
+                    >
                       <SelectTrigger id="doctorName" className="w-full h-12 rounded-2xl bg-white/50 dark:bg-slate-950/50 border-slate-200/60 dark:border-white/5 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all">
                         <SelectValue placeholder="Select doctor" />
                       </SelectTrigger>
@@ -292,6 +394,58 @@ export function CreateLabResultDialog({ children, onCreated }: CreateLabResultDi
                     </div>
                   </div>
                 </div>
+
+                <div className="space-y-4 mt-8">
+                  <Label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Reports & Attachments</Label>
+                  <div className="relative group/upload">
+                    <Input
+                      id="fileUpload"
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={handleFileChange}
+                      className="h-14 rounded-2xl bg-white/50 dark:bg-slate-950/50 border-slate-200/60 dark:border-white/5 cursor-pointer file:cursor-pointer p-[0.4rem] file:h-full file:border-0 file:bg-blue-600/10 file:text-blue-600 file:rounded-xl file:px-4 file:mr-3 transition-all"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-30 group-hover/upload:opacity-100 transition-opacity pointer-events-none">
+                      <Upload className="w-5 h-5 text-blue-600" />
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {selectedFile && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="flex items-center gap-4 p-4 bg-white/60 dark:bg-slate-900/60 border border-slate-200/60 dark:border-white/5 rounded-3xl group/file"
+                      >
+                        <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+                          {selectedFile.type.startsWith("image/") ? (
+                            <ImageIcon className="w-5 h-5 text-blue-500" />
+                          ) : (
+                            <FileIcon className="w-5 h-5 text-rose-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedFile.name}</p>
+                          <p className="text-[10px] font-bold text-slate-400">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB • {selectedFile.type.split("/")[1].toUpperCase()}</p>
+                        </div>
+                        {filePreview && (
+                          <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200/60 dark:border-white/10 flex-shrink-0">
+                            <img src={filePreview} alt="Preview" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => { setSelectedFile(null); setFilePreview(null); }}
+                          className="rounded-full hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -300,6 +454,7 @@ export function CreateLabResultDialog({ children, onCreated }: CreateLabResultDi
             <Button 
               variant="ghost" 
               onClick={() => setOpen(false)} 
+              disabled={loading}
               className="rounded-2xl h-12 px-6 font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
             >
               Cancel
@@ -312,7 +467,7 @@ export function CreateLabResultDialog({ children, onCreated }: CreateLabResultDi
               {loading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Processing...</span>
+                  <span>{uploading ? "Uploading..." : "Processing..."}</span>
                 </div>
               ) : (
                 <>
@@ -323,7 +478,8 @@ export function CreateLabResultDialog({ children, onCreated }: CreateLabResultDi
             </Button>
           </div>
         </div>
+        )}
       </DialogContent>
-    </Dialog >
+    </Dialog>
   )
 }

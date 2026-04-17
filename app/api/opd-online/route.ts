@@ -209,7 +209,7 @@ export async function POST(request: Request) {
             type: appointmentType || "OPD",
             status: "Scheduled",
             phone: phone || null,
-            notes: notes ? `${notes}\n\n[Booked From PGF APP]` : "[Booked From PGF APP]",
+            notes: notes ? `${notes}\n\n[Booked From MOBILE APP]` : "[Booked From MOBILE APP]",
             doctor_id: doctorId,
             hospital_id: hospitalId,
         }

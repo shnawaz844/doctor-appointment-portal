@@ -14,17 +14,36 @@ export async function GET(request: Request) {
 
         let query = supabase.from("prescriptions").select("*").order("created_at", { ascending: false })
 
-        if (session.role !== "SUPER_ADMIN") {
-            if (!session.hospital_id) return NextResponse.json({ error: "No hospital assigned" }, { status: 403 })
-            query = query.eq("hospital_id", session.hospital_id)
-        }
-
-        if (patientId) {
-            query = query.eq("patient_id", patientId)
-        }
-
         if (session.role === "DOCTOR") {
-            query = query.ilike("doctor_name", session.name.trim())
+            if (patientId) {
+                // Check if patient has visited the doctor's hospital
+                const { data: apt } = await supabase
+                    .from("appointments")
+                    .select("id")
+                    .eq("patient_id", patientId)
+                    .eq("hospital_id", session.hospital_id)
+                    .limit(1)
+
+                if (apt && apt.length > 0) {
+                    // Authorized to see all records for this patient
+                    query = query.eq("patient_id", patientId)
+                } else {
+                    // Fallback to records where doctor name matches
+                    query = query.eq("patient_id", patientId).ilike("doctor_name", session.name.trim())
+                }
+            } else {
+                // General list: filter by doctor name
+                query = query.ilike("doctor_name", session.name.trim())
+            }
+        } else {
+            if (session.role !== "SUPER_ADMIN") {
+                if (session.hospital_id) {
+                    query = query.eq("hospital_id", session.hospital_id)
+                }
+            }
+            if (patientId) {
+                query = query.eq("patient_id", patientId)
+            }
         }
 
         const { data, error } = await query

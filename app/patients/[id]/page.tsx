@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { User, Phone, Mail, Calendar, FileText, Download, ExternalLink, ArrowLeft, Pill, Plus, FileImage, Eye } from "lucide-react"
+import { User, Phone, Mail, Calendar, FileText, Download, ExternalLink, ArrowLeft, Pill, Plus, FileImage, Eye, Beaker, Paperclip } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { ImagingStudies } from "@/components/imaging-studies"
 import { CreateImagingDialog } from "@/components/create-imaging-dialog"
@@ -17,6 +17,7 @@ import { ViewMedicalRecordDialog } from "@/components/view-medical-record-dialog
 import { ViewPrescriptionDialog } from "@/components/view-prescription-dialog"
 import { FileSignature, Trash2 } from "lucide-react"
 import { DeleteReportDialog } from "@/components/delete-report-dialog"
+import { ViewAttachmentButton } from "@/components/view-attachment-button"
 
 export default async function PatientProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -49,6 +50,7 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
     { data: patientMedicalRecordsData },
     { data: patientImagingStudiesData },
     { data: patientPrescriptionsData },
+    { data: patientLabResultsData },
     { data: specialtiesData }
   ] = await Promise.all([
     supabase.from("reports")
@@ -70,6 +72,10 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
       .select("*")
       .or(`patient_id.eq.${id}${uccn ? `,unique_citizen_card_number.eq.${uccn}` : ""}`)
       .order("issued", { ascending: false }),
+    supabase.from("labresults")
+      .select("*")
+      .or(`patient_id.eq.${id}${uccn ? `,patient_name.ilike.%${patient.name}%` : ""}`)
+      .order("date", { ascending: false }),
     supabase.from("specialties").select("*")
   ])
 
@@ -78,6 +84,7 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
   const patientMedicalRecords = patientMedicalRecordsData || []
   const patientImagingStudies = patientImagingStudiesData || []
   const patientPrescriptions = patientPrescriptionsData || []
+  const patientLabResults = patientLabResultsData || []
   const specialties = specialtiesData || []
 
   // Fetch doctor's specialty based on patient.doctor or patient.diagnosis
@@ -197,6 +204,7 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
             <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm">Overview</TabsTrigger>
             <TabsTrigger value="visits" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm">Visits & Appointments</TabsTrigger>
             <TabsTrigger value="reports" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm">Medical Reports</TabsTrigger>
+            <TabsTrigger value="lab-results" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm">Lab Results</TabsTrigger>
             <TabsTrigger value="prescriptions" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm">Prescriptions</TabsTrigger>
             <TabsTrigger value="imaging" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm">Imaging</TabsTrigger>
           </TabsList>
@@ -230,23 +238,13 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                     </div>
                   </div>
                   <Separator />
-                  {patient.unique_citizen_card_number ? (
-                    <div className="flex items-start gap-3">
-                      <FileText className="h-5 w-5 text-blue-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Unique Citizen Card Number</p>
-                        <p className="text-base font-bold text-blue-600 dark:text-blue-400">{patient.unique_citizen_card_number}</p>
-                      </div>
+                  <div className="flex items-start gap-3">
+                    <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Phone</p>
+                      <p className="text-base font-medium text-foreground">{patient.phone}</p>
                     </div>
-                  ) : (
-                    <div className="flex items-start gap-3">
-                      <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Phone</p>
-                        <p className="text-base font-medium text-foreground">{patient.phone}</p>
-                      </div>
-                    </div>
-                  )}
+                  </div>
                   <Separator />
                   <div className="flex items-start gap-3">
                     <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
@@ -273,12 +271,12 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                   <Separator />
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Attending Doctor</p>
-                    <p className="text-base font-medium text-foreground">{patient.doctor}</p>
+                    <p className="text-base font-medium text-foreground">{patientAppointments[0]?.doctor || patient.doctor || "N/A"}</p>
                   </div>
                   <Separator />
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Last Visit</p>
-                    <p className="text-base font-medium text-foreground">{patient.last_visit}</p>
+                    <p className="text-base font-medium text-foreground">{patientAppointments[0]?.date || patient.last_visit || "N/A"}</p>
                   </div>
                   {patientAppointments[0]?.notes && (
                     <>
@@ -287,13 +285,15 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                         <p className="text-sm font-medium mb-2 text-[#e05d38]">Appointment Notes</p>
                         {(() => {
                           const notes = patientAppointments[0].notes;
-                          const match = notes.trim().match(/^(\[.*?\])\s*([\s\S]*)$/);
-                          if (match) {
+                          const tagMatch = notes.match(/\[.*?\]/);
+                          if (tagMatch) {
+                            const tag = tagMatch[0];
+                            const content = notes.replace(tag, "").trim();
                             return (
                               <div className="space-y-2">
-                                <p className="text-base font-bold text-foreground leading-tight">{match[2]}</p>
+                                {content && <p className="text-base font-bold text-foreground leading-tight">{content}</p>}
                                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-slate-100 dark:bg-slate-900 w-fit px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
-                                  {match[1]}
+                                  {tag}
                                 </p>
                               </div>
                             );
@@ -354,24 +354,26 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                             <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{apt.date} at {apt.time} • {apt.doctor}</p>
                           </div>
                         </div>
-                         {apt.notes && (
-                           <div className="mt-2 pl-14">
-                             {(() => {
-                               const match = apt.notes.trim().match(/^(\[.*?\])\s*([\s\S]*)$/);
-                               if (match) {
-                                 return (
-                                   <div className="space-y-1.5">
-                                     <p className="text-xs text-slate-600 dark:text-slate-400 font-medium italic">"{match[2]}"</p>
-                                     <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest bg-slate-100 dark:bg-slate-900 w-fit px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
-                                       {match[1]}
-                                     </p>
-                                   </div>
-                                 );
-                               }
-                               return <p className="text-xs text-slate-600 dark:text-slate-400 font-medium italic">"{apt.notes}"</p>;
-                             })()}
-                           </div>
-                         )}
+                        {apt.notes && (
+                          <div className="mt-2 pl-14">
+                            {(() => {
+                              const tagMatch = apt.notes.match(/\[.*?\]/);
+                              if (tagMatch) {
+                                const tag = tagMatch[0];
+                                const content = apt.notes.replace(tag, "").trim();
+                                return (
+                                  <div className="space-y-1.5">
+                                    {content && <p className="text-xs text-slate-600 dark:text-slate-400 font-medium italic">"{content}"</p>}
+                                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest bg-slate-100 dark:bg-slate-900 w-fit px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
+                                      {tag}
+                                    </p>
+                                  </div>
+                                );
+                              }
+                              return <p className="text-xs text-slate-600 dark:text-slate-400 font-medium italic">"{apt.notes}"</p>;
+                            })()}
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (
@@ -461,6 +463,76 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                   <div className="text-center py-12 text-muted-foreground border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl">
                     <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
                     <p className="text-sm font-bold opacity-50 uppercase tracking-widest">No medical records found</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Lab Results Tab */}
+          <TabsContent value="lab-results" className="space-y-6">
+            <Card className="rounded-3xl border-none shadow-xl bg-white/50 dark:bg-slate-950/50 backdrop-blur-xl">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-6 mb-6">
+                <div>
+                  <CardTitle className="text-xl font-black text-slate-900 dark:text-white">Lab Results</CardTitle>
+                  <CardDescription className="text-sm font-medium text-slate-500">Diagnostic lab reports and clinical test outcomes</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 px-4 md:px-8">
+                {patientLabResults.length > 0 ? (
+                  <div className="space-y-3">
+                    {patientLabResults.map((result: any, index: number) => (
+                      <div
+                        key={result.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-900 transition-all gap-4 shadow-sm"
+                      >
+                        <div className="flex items-center gap-4 flex-1">
+                          <div className="h-12 w-12 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0">
+                            <Beaker className="h-6 w-6 text-indigo-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-black text-slate-900 dark:text-white leading-tight">{result.test_name}</p>
+                              {result.attachment_url && (
+                                <Paperclip className="h-3.5 w-3.5 text-blue-500" />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                              <span>Sr No: {index + 1}</span>
+                              <span className="w-1 h-1 rounded-full bg-slate-300" />
+                              <span>{result.date}</span>
+                              <span className="w-1 h-1 rounded-full bg-slate-300" />
+                              <span className="text-blue-600 dark:text-blue-400">Dr. {result.doctor}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 shrink-0 sm:self-auto self-end">
+                          <div className="text-right hidden sm:block">
+                            <p className={`text-xs font-black uppercase tracking-wider ${
+                              result.result === 'Normal' ? 'text-emerald-600' : 
+                              result.result === 'Abnormal' ? 'text-rose-600' : 'text-amber-600'
+                            }`}>
+                              {result.result}
+                            </p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase">{result.status}</p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {result.attachment_url && (
+                              <ViewAttachmentButton 
+                                url={result.attachment_url} 
+                                type={result.attachment_type}
+                                label="View File"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl">
+                    <Beaker className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                    <p className="text-sm font-bold opacity-50 uppercase tracking-widest">No lab results found</p>
                   </div>
                 )}
               </CardContent>

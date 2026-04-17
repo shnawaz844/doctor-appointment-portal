@@ -96,7 +96,7 @@ export default function AppointmentsPage() {
     const isOnline = (a.type !== "OPD" && a.type === "Online Consultation") ||
       (a.type !== "OPD" && (
         a.notes?.includes("[Online Booking]") ||
-        a.notes?.includes("[Booked From PGF APP]") ||
+        a.notes?.includes("[Booked From MOBILE APP]") ||
         a.notes?.includes("Online Teleconsultation") ||
         a.notes?.includes("Online appointment")
       ))
@@ -419,7 +419,7 @@ export default function AppointmentsPage() {
                     <TableRow className="hover:bg-transparent border-slate-200/50 dark:border-slate-800/50">
                       <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12 w-10">S.no</TableHead>
                       <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Patient Name</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">OPD NO / UCCN NO</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">APPOINTMENT ID</TableHead>
                       {activeTab !== "today" && activeTab !== "online" && (
                         <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Date</TableHead>
                       )}
@@ -446,7 +446,7 @@ export default function AppointmentsPage() {
                             </Link>
                           </TableCell>
                           <TableCell className="font-mono text-[11px] text-slate-500 py-4">
-                            {apt.unique_citizen_card_number || apt.patient_id}
+                            {apt.id}
                           </TableCell>
                           {activeTab !== "today" && activeTab !== "online" && (
                             <TableCell className="py-4">
@@ -509,7 +509,7 @@ export default function AppointmentsPage() {
                                   </Button>
                                 </CreatePrescriptionDialog>
                               )}
-                              {(apt.type === "Online Consultation" || apt.notes?.includes("[Online Booking]") || (apt.notes?.includes("[Booked From PGF APP]") && apt.type !== "OPD") || apt.notes?.includes("Online")) && (
+                              {(apt.type === "Online Consultation" || apt.notes?.includes("[Online Booking]") || (apt.notes?.includes("[Booked From MOBILE APP]") && apt.type !== "OPD") || apt.notes?.includes("Online")) && (
                                 (() => {
                                   const enabled = apt.type === "Online Consultation" || isVideoEnabled(apt.date, apt.time) || apt.notes?.includes("Online");
                                   return (
@@ -520,7 +520,7 @@ export default function AppointmentsPage() {
                                         "h-7 px-2.5 rounded-lg border-indigo-200 dark:border-indigo-800 text-indigo-600 font-bold text-[10px] uppercase tracking-widest transition-all",
                                         enabled ? "hover:bg-indigo-600 hover:text-white" : "opacity-50 cursor-not-allowed bg-slate-100"
                                       )}
-                                      onClick={() => enabled && window.open(`https://meet.jit.si/ParthGautamFoundation-${apt._id || apt.id}`, '_blank')}
+                                      onClick={() => enabled && window.open(`https://meet.jit.si/appointment-portal-${apt._id || apt.id}`, '_blank')}
                                       title={enabled ? "Join Video Call" : "Video will enable before 5 min"}
                                       disabled={!enabled}
                                     >

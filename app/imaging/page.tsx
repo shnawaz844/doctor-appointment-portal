@@ -8,8 +8,10 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
-import { FileImage, AlertCircle, CheckCircle2, Eye, Download, Maximize2, FileText, Plus, Loader2 } from "lucide-react"
+import { FileImage, AlertCircle, CheckCircle2, Eye, Download, Maximize2, FileText, Plus, Loader2, X, Search } from "lucide-react"
 import { CreateImagingDialog } from "@/components/create-imaging-dialog"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Input } from "@/components/ui/input"
 
 interface ImagingStudy {
   id: string
@@ -32,11 +34,15 @@ export default function ImagingPage() {
   const [modalityFilter, setModalityFilter] = useState("all")
   const [bodyPartFilter, setBodyPartFilter] = useState("all")
   const [yearFilter, setYearFilter] = useState("all")
+  const [doctorFilter, setDoctorFilter] = useState("all")
+  const [studyTypeFilter, setStudyTypeFilter] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 6
+  const itemsPerPage = 8
   const [selectedImage, setSelectedImage] = useState<ImagingStudy | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [showReport, setShowReport] = useState(false)
+  const [isFullScreen, setIsFullScreen] = useState(false)
 
   const fetchStudies = useCallback(async () => {
     try {
@@ -58,17 +64,25 @@ export default function ImagingPage() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [modalityFilter, bodyPartFilter, yearFilter])
+  }, [modalityFilter, bodyPartFilter, yearFilter, doctorFilter, studyTypeFilter, searchQuery])
 
-  // Derive unique body parts and years from fetched data
+  // Derive unique body parts, years, doctors, and study types from fetched data
   const uniqueBodyParts = Array.from(new Set(studies.map((s) => s.body_part))).sort()
   const uniqueYears = Array.from(new Set(studies.map((s) => s.year))).sort((a, b) => Number(b) - Number(a))
+  const uniqueDoctors = Array.from(new Set(studies.map((s) => s.doctor))).sort()
+  const uniqueStudyTypes = Array.from(new Set(studies.map((s) => s.study_type))).sort()
 
   const filteredStudies = studies.filter((study) => {
     const matchesModality = modalityFilter === "all" || study.modality === modalityFilter
     const matchesBodyPart = bodyPartFilter === "all" || study.body_part === bodyPartFilter
     const matchesYear = yearFilter === "all" || study.year === yearFilter
-    return matchesModality && matchesBodyPart && matchesYear
+    const matchesDoctor = doctorFilter === "all" || study.doctor === doctorFilter
+    const matchesStudyType = studyTypeFilter === "all" || study.study_type === studyTypeFilter
+    const matchesSearch = 
+      study.patient_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      study.id.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    return matchesModality && matchesBodyPart && matchesYear && matchesDoctor && matchesStudyType && matchesSearch
   })
 
   const totalPages = Math.max(1, Math.ceil(filteredStudies.length / itemsPerPage))
@@ -119,50 +133,92 @@ export default function ImagingPage() {
         </div>
 
 
-        {/* Filters */}
-        <Card className="mb-6">
+        {/* Filters and Search */}
+        <Card className="mb-6 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800">
           <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
-              <Select value={modalityFilter} onValueChange={setModalityFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Modality" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Modalities</SelectItem>
-                  <SelectItem value="X-Ray">X-Ray</SelectItem>
-                  <SelectItem value="CT">CT Scan</SelectItem>
-                  <SelectItem value="MRI">MRI</SelectItem>
-                  <SelectItem value="Ultrasound">Ultrasound</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex flex-col gap-4">
+              {/* Search Bar */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search by patient name or study ID..."
+                  className="pl-10 h-11 bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl focus:ring-blue-500/20 transition-all"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
 
-              <Select value={bodyPartFilter} onValueChange={setBodyPartFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Body Part" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Body Parts</SelectItem>
-                  {uniqueBodyParts.map((part) => (
-                    <SelectItem key={part} value={part}>
-                      {part}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Select Filters */}
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
+                <Select value={modalityFilter} onValueChange={setModalityFilter}>
+                  <SelectTrigger className="w-full sm:w-[150px] h-11 bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl">
+                    <SelectValue placeholder="Modality" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-xl">
+                    <SelectItem value="all">All Modalities</SelectItem>
+                    <SelectItem value="X-Ray">X-Ray</SelectItem>
+                    <SelectItem value="CT">CT Scan</SelectItem>
+                    <SelectItem value="MRI">MRI</SelectItem>
+                    <SelectItem value="Ultrasound">Ultrasound</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              <Select value={yearFilter} onValueChange={setYearFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Year" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Years</SelectItem>
-                  {uniqueYears.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <Select value={bodyPartFilter} onValueChange={setBodyPartFilter}>
+                  <SelectTrigger className="w-full sm:w-[150px] h-11 bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl">
+                    <SelectValue placeholder="Body Part" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-xl">
+                    <SelectItem value="all">All Body Parts</SelectItem>
+                    {uniqueBodyParts.map((part) => (
+                      <SelectItem key={part} value={part}>
+                        {part}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={studyTypeFilter} onValueChange={setStudyTypeFilter}>
+                  <SelectTrigger className="w-full sm:w-[150px] h-11 bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl">
+                    <SelectValue placeholder="Study Type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-xl">
+                    <SelectItem value="all">All Study Types</SelectItem>
+                    {uniqueStudyTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={doctorFilter} onValueChange={setDoctorFilter}>
+                  <SelectTrigger className="w-full sm:w-[150px] h-11 bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl">
+                    <SelectValue placeholder="Doctor" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-xl">
+                    <SelectItem value="all">All Doctors</SelectItem>
+                    {uniqueDoctors.map((doc) => (
+                      <SelectItem key={doc} value={doc}>
+                        {doc}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={yearFilter} onValueChange={setYearFilter}>
+                  <SelectTrigger className="w-full sm:w-[150px] h-11 bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl">
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-xl">
+                    <SelectItem value="all">All Years</SelectItem>
+                    {uniqueYears.map((year) => (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
 
@@ -174,82 +230,71 @@ export default function ImagingPage() {
           </CardContent>
         </Card>
 
-        {/* Grid */}
+        {/* Table View */}
         {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
-            <span className="ml-3 text-muted-foreground text-lg">Loading imaging studies...</span>
+          <div className="flex flex-col items-center justify-center py-20 bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+            <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-4" />
+            <span className="text-slate-500 dark:text-slate-400 font-medium">Loading imaging studies...</span>
           </div>
-        ) : filteredStudies.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {paginatedStudies.map((study) => (
-              <Card key={study.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div
-                  className="relative h-48 bg-muted group cursor-pointer"
-                  onClick={() => openImageView(study)}
-                >
-                  <img
-                    src={study.thumbnail || "/placeholder.svg"}
-                    alt={study.study_type}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Button variant="secondary" size="sm">
-                      <Maximize2 className="h-4 w-4 mr-2" />
-                      View Full Size
-                    </Button>
-                  </div>
-                  {study.ai_flag && (
-                    <Badge
-                      variant="outline"
-                      className={`absolute top-3 right-3 ${getAiFlagColor(study.ai_flag)} flex items-center gap-1`}
-                    >
-                      {getAiFlagIcon(study.ai_flag)}
-                      {study.ai_flag}
-                    </Badge>
-                  )}
-                </div>
-
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-foreground mb-1">{study.study_type}</h3>
-                  <p className="text-sm text-muted-foreground mb-3">{study.patient_name}</p>
-
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <Badge variant="outline">{study.modality}</Badge>
-                    <Badge variant="outline">{study.body_part}</Badge>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
-                    <span>{study.date}</span>
-                    <span className="font-mono">{study.id}</span>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 bg-transparent"
-                      onClick={() => openImageView(study)}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        ) : filteredStudies.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-center">
+            <div className="p-4 bg-slate-200/50 dark:bg-slate-800/50 rounded-2xl mb-4">
+              <FileImage className="h-10 w-10 text-slate-400" />
+            </div>
+            <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-lg">No Imaging Studies Found</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs">Add a new imaging study to start managing data.</p>
           </div>
         ) : (
-          <Card>
-            <CardContent className="py-24 text-center">
-              <FileImage className="h-20 w-20 mx-auto text-muted-foreground opacity-20 mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No Imaging Studies Found</h3>
-              <p className="text-muted-foreground">Try adjusting your filters or add a new imaging study.</p>
-            </CardContent>
-          </Card>
+          <div className="glass-premium rounded-3xl p-4 md:p-8 hover:shadow-2xl transition-all animate-in fade-in slide-in-from-bottom-6 duration-1000">
+             <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto bg-white/30 dark:bg-slate-950/30">
+              <Table>
+                <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50">
+                  <TableRow className="hover:bg-transparent border-slate-200 dark:border-slate-800">
+                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Sr No</TableHead>
+                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Study ID</TableHead>
+                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Patient Name</TableHead>
+                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Study Type</TableHead>
+                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Body Part</TableHead>
+                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Date</TableHead>
+                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Doctor</TableHead>
+                    <TableHead className="text-right font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedStudies.map((study, index) => (
+                    <TableRow key={study.id} className="hover:bg-blue-500/5 dark:hover:bg-blue-400/5 border-slate-100 dark:border-slate-800 transition-colors">
+                      <TableCell className="text-xs font-bold text-slate-400">
+                        {((currentPage - 1) * itemsPerPage) + index + 1}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{study.id}</TableCell>
+                      <TableCell className="font-black text-slate-900 dark:text-white">{study.patient_name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                            <FileImage className="h-3.5 w-3.5 text-slate-500" />
+                          </div>
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{study.study_type}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm font-medium text-slate-600 dark:text-slate-400">{study.body_part}</TableCell>
+                      <TableCell className="text-sm font-medium text-slate-600 dark:text-slate-400">{study.date}</TableCell>
+                      <TableCell className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Dr. {study.doctor}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Button variant="ghost" size="icon" onClick={() => openImageView(study)} className="hover:bg-blue-500/10 hover:text-blue-600 dark:hover:bg-blue-400/10 rounded-xl" title="View Details">
+                            <Eye className="h-4.5 w-4.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:bg-emerald-400/10 rounded-xl" title="Download">
+                            <Download className="h-4.5 w-4.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         )}
 
         {!loading && totalPages > 1 && (
@@ -294,12 +339,18 @@ export default function ImagingPage() {
           {selectedImage && (
             <div className="space-y-4">
               {!showReport ? (
-                <div className="relative aspect-16/10 bg-muted rounded-lg overflow-hidden">
+                <div className="relative aspect-16/10 bg-muted rounded-lg overflow-hidden group cursor-pointer" onClick={() => {
+                  setIsFullScreen(true)
+                  setIsDialogOpen(false)
+                }}>
                   <img
                     src={selectedImage.thumbnail || "/placeholder.svg"}
                     alt={selectedImage.study_type}
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-contain transition-transform group-hover:scale-105"
                   />
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Maximize2 className="h-10 w-10 text-white" />
+                  </div>
                 </div>
               ) : (
                 <div className="bg-muted rounded-lg p-6 max-h-96 overflow-y-auto">
@@ -399,6 +450,35 @@ export default function ImagingPage() {
           )}
         </DialogContent>
       </Dialog>
+      
+      {/* Full Screen Overlay */}
+      {isFullScreen && selectedImage && (
+        <div className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center p-4">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => {
+              setIsFullScreen(false)
+              setIsDialogOpen(true)
+            }} 
+            className="absolute top-4 right-4 text-white hover:bg-white/10 rounded-full z-[110]"
+          >
+            <X className="h-8 w-8" />
+          </Button>
+          <div className="relative w-full h-full flex items-center justify-center">
+             <img
+                src={selectedImage.thumbnail || "/placeholder.svg"}
+                alt={selectedImage.study_type}
+                className="max-w-full max-h-full object-contain shadow-2xl"
+              />
+          </div>
+          <div className="absolute bottom-10 left-10 text-white/80 p-6 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10">
+            <h2 className="text-2xl font-black mb-1">{selectedImage.study_type}</h2>
+            <p className="font-bold text-emerald-400">Dr. {selectedImage.doctor}</p>
+            <p className="text-sm opacity-60 mt-2">{selectedImage.patient_name} • {selectedImage.date}</p>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { getAuthSession } from "@/lib/auth"
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
         const session = await getAuthSession()
         if (!session) {
@@ -11,17 +11,39 @@ export async function GET() {
 
         let query = supabase.from("imagingstudies").select("*").order("date", { ascending: false })
 
-        if (session.role === "SUPER_ADMIN") {
-            if (session.hospital_id) {
-                query = query.eq("hospital_id", session.hospital_id)
-            }
-        } else {
-            if (!session.hospital_id) return NextResponse.json({ error: "No hospital assigned" }, { status: 403 })
-            query = query.eq("hospital_id", session.hospital_id)
-        }
+        const { searchParams } = new URL(request.url)
+        const patientId = searchParams.get("patientId") || searchParams.get("patient_id")
 
         if (session.role === "DOCTOR") {
-            query = query.ilike("doctor", session.name.trim())
+            if (patientId) {
+                // Check if patient has visited the doctor's hospital
+                const { data: apt } = await supabase
+                    .from("appointments")
+                    .select("id")
+                    .eq("patient_id", patientId)
+                    .eq("hospital_id", session.hospital_id)
+                    .limit(1)
+
+                if (apt && apt.length > 0) {
+                    // Authorized to see all records for this patient
+                    query = query.eq("patient_id", patientId)
+                } else {
+                    // Fallback to records where doctor name matches
+                    query = query.eq("patient_id", patientId).ilike("doctor", session.name.trim())
+                }
+            } else {
+                // General list: filter by doctor name
+                query = query.ilike("doctor", session.name.trim())
+            }
+        } else if (session.role !== "SUPER_ADMIN") {
+            // STAFF or other roles might need hospital filtering? 
+            // Since imagingstudies lacks hospital_id, we can't filter directly.
+            // But if they are looking for a patient, we can allow if that patient is in their hospital.
+            if (patientId) {
+                query = query.eq("patient_id", patientId)
+            }
+        } else if (patientId) {
+            query = query.eq("patient_id", patientId)
         }
 
         const { data, error } = await query
@@ -34,13 +56,14 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+    let body: any = null
     try {
         const session = await getAuthSession()
         if (!session) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        const body = await request.json()
+        body = await request.json()
         const dateObj = new Date(body.date || Date.now())
         const imgData = {
             id: body.id || `IMG-${Math.floor(10000 + Math.random() * 90000)}`,
@@ -52,17 +75,17 @@ export async function POST(request: Request) {
             date: body.date || dateObj.toISOString().split("T")[0],
             month: body.month || dateObj.toLocaleString("en", { month: "short" }),
             year: body.year || String(dateObj.getFullYear()),
-            ai_flag: body.aiFlag || body.ai_flag,
+            ai_flag: body.aiFlag || body.ai_flag || "Normal",
             doctor: body.doctor || session.name,
             thumbnail: body.thumbnail || "/placeholder.svg",
-            hospital_id: session.hospital_id || body.hospital_id,
+            // hospital_id column does not exist in imagingstudies
         }
 
         const { data, error } = await supabase.from("imagingstudies").insert(imgData).select().single()
         if (error) throw error
         return NextResponse.json(data, { status: 201 })
     } catch (error: any) {
-        console.error("Failed to create imaging study:", error)
+        console.error("Failed to create imaging study. Payload:", body)
         return NextResponse.json({
             error: "Failed to create imaging study",
             details: error.message || "Unknown error"

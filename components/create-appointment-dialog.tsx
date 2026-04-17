@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { formatPhoneWithPrefix } from "@/lib/phone"
 
 export function CreateAppointmentDialog({ children, onSuccess, preselectedPatientId }: { children: React.ReactNode, onSuccess?: () => void, preselectedPatientId?: string }) {
   const [open, setOpen] = useState(false)
@@ -140,7 +141,7 @@ export function CreateAppointmentDialog({ children, onSuccess, preselectedPatien
     try {
       let patientId = existingPatient?.id
       let patientName = existingPatient?.name || formData.patientName
-      let patientPhone = existingPatient?.phone || formData.phone
+      let patientPhone = formatPhoneWithPrefix(existingPatient?.phone || formData.phone)
 
       if (isNewPatient) {
         // Create new patient

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { getAuthSession } from "@/lib/auth"
+import { formatPhoneWithPrefix } from "@/lib/phone"
 
 export async function GET() {
     try {
@@ -9,7 +10,7 @@ export async function GET() {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        let query = supabase.from("appointments").select("*").order("created_at", { ascending: false })
+        let query = supabase.from("appointments").select("*, patients!patient_id(*)").order("created_at", { ascending: false })
 
         if (session.role === "SUPER_ADMIN") {
             if (session.hospital_id) {
@@ -31,9 +32,13 @@ export async function GET() {
         const { data, error } = await query
         if (error) throw error
         return NextResponse.json(data)
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to fetch appointments:", error)
-        return NextResponse.json({ error: "Failed to fetch appointments" }, { status: 500 })
+        return NextResponse.json({ 
+            error: "Failed to fetch appointments",
+            message: error.message || "Unknown error",
+            details: error.details || error.hint || null
+        }, { status: 500 })
     }
 }
 
@@ -55,7 +60,7 @@ export async function POST(request: Request) {
             specialty: body.specialty || "General",
             type: body.type,
             status: body.status || "Scheduled",
-            phone: body.phone,
+            phone: formatPhoneWithPrefix(body.phone),
             unique_citizen_card_number: body.uniqueCitizenCardNumber || body.unique_citizen_card_number,
             notes: body.notes,
             hospital_id: session.hospital_id || body.hospital_id,
@@ -96,7 +101,7 @@ export async function PUT(request: Request) {
         if (body.specialty) updateData.specialty = body.specialty
         if (body.type) updateData.type = body.type
         if (body.status) updateData.status = body.status
-        if (body.phone) updateData.phone = body.phone
+        if (body.phone) updateData.phone = formatPhoneWithPrefix(body.phone)
         if (body.uniqueCitizenCardNumber || body.unique_citizen_card_number) updateData.unique_citizen_card_number = body.uniqueCitizenCardNumber || body.unique_citizen_card_number
         if (body.notes !== undefined) updateData.notes = body.notes
 

@@ -177,11 +177,10 @@ export default function PatientsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-10">S.no</TableHead>
-                        <TableHead>OPD No</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Age</TableHead>
                         <TableHead>Gender</TableHead>
-                        <TableHead>Phone / UCCN</TableHead>
+                        <TableHead>Phone NO</TableHead>
                         <TableHead>Diagnosis</TableHead>
                         <TableHead>Doctor</TableHead>
                         <TableHead>Last Visit</TableHead>
@@ -193,16 +192,11 @@ export default function PatientsPage() {
                         paginatedPatients.map((patient, index) => (
                           <TableRow key={patient.id}>
                             <TableCell className="font-mono text-[11px] text-muted-foreground">{startIndex + index + 1}</TableCell>
-                            <TableCell className="font-mono text-sm font-medium">{patient.id}</TableCell>
                             <TableCell className="font-medium">{patient.name}</TableCell>
                             <TableCell>{patient.age}</TableCell>
                             <TableCell className="text-muted-foreground">{patient.gender}</TableCell>
                             <TableCell className="text-muted-foreground font-medium">
-                              {patient.unique_citizen_card_number ? (
-                                <span className="text-blue-600 dark:text-blue-400">{patient.unique_citizen_card_number}</span>
-                              ) : (
-                                patient.phone
-                              )}
+                              {patient.phone}
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline" className={cn("px-2.5 py-0.5 font-semibold", getDiagnosisColor(patient.diagnosis))}>

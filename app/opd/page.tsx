@@ -18,6 +18,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import { formatPhoneWithPrefix } from "@/lib/phone"
 
 export default function OPDPage() {
     const [formData, setFormData] = useState({
@@ -41,7 +42,6 @@ export default function OPDPage() {
     const [doctors, setDoctors] = useState<any[]>([])
     const [specialties, setSpecialties] = useState<any[]>([])
     const [isSaving, setIsSaving] = useState(false)
-    const [isSearchingCard, setIsSearchingCard] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [openPatient, setOpenPatient] = useState(false)
     const [openConsultant, setOpenConsultant] = useState(false)
@@ -99,40 +99,6 @@ export default function OPDPage() {
         fetchInitialData()
     }, [])
 
-    // Autofill patient details when Unique Citizen Card No is entered
-    useEffect(() => {
-        const cardNo = formData.uniqueCitizenCardNumber?.trim()
-        if (!cardNo || cardNo.length < 3) return
-
-        const delayDebounceFn = setTimeout(async () => {
-            // Check if we already have this patient in the local 'patients' state
-            const localMatch = patients.find(p => p.unique_citizen_card_number === cardNo)
-            if (localMatch) {
-                handlePatientSelect(localMatch)
-                toast.success("Details filled from local records")
-                return
-            }
-
-            // Fetch from database if not found locally
-            try {
-                setIsSearchingCard(true)
-                const res = await fetch(`/api/patients?unique_citizen_card_number=${encodeURIComponent(cardNo)}`)
-                if (res.ok) {
-                    const data = await res.json()
-                    if (Array.isArray(data) && data.length > 0) {
-                        toast.success("Patient details fetched from database!")
-                        handlePatientSelect(data[0])
-                    }
-                }
-            } catch (error) {
-                console.error("Error fetching patient by card number:", error)
-            } finally {
-                setIsSearchingCard(false)
-            }
-        }, 1000) // 1 second debounce
-
-        return () => clearTimeout(delayDebounceFn)
-    }, [formData.uniqueCitizenCardNumber])
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {}
@@ -171,8 +137,9 @@ export default function OPDPage() {
             const now = new Date()
             const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
-            // Normalize mobile number for matching
-            const normalizedPhone = formData.mobileNo.replace(/^\+91\s?/, "").replace(/\D/g, "")
+            // Normalize mobile number for matching and saving
+            const formattedMobile = formatPhoneWithPrefix(formData.mobileNo)
+            const normalizedPhone = formattedMobile.replace(/^\+91\s?/, "").replace(/\D/g, "")
 
             // 1. Patient Sync
             let finalUhid = formData.uhidNo
@@ -215,15 +182,12 @@ export default function OPDPage() {
                 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
                 const newPatientPayload = {
-                    id: finalUhid,
                     name: formData.patientName,
                     age: parseInt(formData.age) || 0,
                     gender: formData.sex || "Others",
-                    phone: formData.mobileNo,
+                    phone: formattedMobile,
                     diagnosis: "OPD Consultation",
                     doctor: formData.consultant,
-                    doctor_id: doctorId,
-                    hospital_id: hospitalId,
                     lastVisit: today,
                     reportType: "OPD",
                     year: now.getFullYear().toString(),
@@ -262,6 +226,7 @@ export default function OPDPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     ...formData,
+                    mobileNo: formattedMobile,
                     uhidNo: finalUhid,
                     doctor_id: doctorId,
                     hospital_id: hospitalId
@@ -289,7 +254,7 @@ export default function OPDPage() {
                     specialty: selectedSpecialty?.name || "General",
                     type: "OPD",
                     status: "Scheduled",
-                    phone: formData.mobileNo,
+                    phone: formattedMobile,
                     unique_citizen_card_number: formData.uniqueCitizenCardNumber,
                 }
 
@@ -383,15 +348,7 @@ export default function OPDPage() {
 
             {/* Input Form UI (Visible on screen) */}
             <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl rounded-3xl md:rounded-4xl p-4 sm:p-8 no-print">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                    <div className="relative">
-                        <InputFormGroup label="Unique Citizen Card No" name="uniqueCitizenCardNumber" value={formData.uniqueCitizenCardNumber} onChange={handleChange} error={errors.uniqueCitizenCardNumber} />
-                        {isSearchingCard && (
-                            <div className="absolute right-3 top-10">
-                                <Activity className="h-4 w-4 animate-spin text-primary" />
-                            </div>
-                        )}
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <InputFormGroup label="UHID No." name="uhidNo" value={formData.uhidNo} onChange={handleChange} error={errors.uhidNo} />
                     <InputFormGroup label="Date" name="date" value={formData.date} onChange={handleChange} error={errors.date} />
                     <InputFormGroup label="Token No." name="tokenNo" value={formData.tokenNo} onChange={handleChange} error={errors.tokenNo} />
@@ -565,15 +522,6 @@ export default function OPDPage() {
                             </div>
                         </div>
 
-                        {/* Row 1.5 Custom Card Number */}
-                        {formData.uniqueCitizenCardNumber && (
-                            <div className="grid grid-cols-12 leading-relaxed">
-                                <div className="col-span-12 flex items-baseline">
-                                    <span className="text-[9.5pt] font-black w-[48.5mm]">Unique Citizen Card No.</span>
-                                    <span className="text-[9.5pt] font-black">: {formData.uniqueCitizenCardNumber}</span>
-                                </div>
-                            </div>
-                        )}
 
                         {/* Row 2 */}
                         <div className="grid grid-cols-12 leading-relaxed">

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, User, Calendar, Smartphone, Mail, Stethoscope, FileText, ChevronRight, ChevronLeft, Activity, Info, AlertCircle, Upload } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
+import { formatPhoneWithPrefix } from "@/lib/phone"
 
 export function AddPatientDialog({ children, onSuccess }: { children: React.ReactNode, onSuccess?: () => void }) {
   const [open, setOpen] = useState(false)
@@ -127,7 +128,7 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
         name: formData.name,
         age: Number(formData.age),
         gender: formData.gender,
-        phone: formData.phone,
+        phone: formatPhoneWithPrefix(formData.phone),
         diagnosis: formData.diagnosis,
         doctor: formData.doctor,
         lastVisit: now.toISOString().split('T')[0],

@@ -7,11 +7,11 @@ export async function GET(
     { params }: { params: { uccn: string } }
 ) {
     try {
-        // Optional: auth session check
-        // const session = await getAuthSession()
-        // if (!session) {
-        //     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-        // }
+        // Secure auth check
+        const session = await getAuthSession()
+        if (!session) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        }
 
         const { uccn } = await params
 
@@ -32,13 +32,34 @@ export async function GET(
 
         const patientId = patient?.id
 
-        // 2. Fetch imaging studies where citizen_id matches OR patient_id matches
+        // 2. Authorization check for doctors
+        let authorized = true
+        if (session.role === "DOCTOR") {
+            const checkId = patientId || uccn
+            const { data: apt } = await supabase
+                .from("appointments")
+                .select("id")
+                .or(`patient_id.eq.${checkId},unique_citizen_card_number.eq.${uccn}`)
+                .eq("hospital_id", session.hospital_id)
+                .limit(1)
+            
+            if (!apt || apt.length === 0) {
+                authorized = false
+            }
+        }
+
+        // 3. Fetch imaging studies
         let query = supabase.from("imagingstudies").select("*")
 
         if (patientId) {
             query = query.or(`citizen_id.eq.${uccn},patient_id.eq.${patientId}`)
         } else {
             query = query.eq("citizen_id", uccn)
+        }
+
+        if (!authorized && session.role === "DOCTOR") {
+            // If not authorized by appointment, only show records where doctor matches
+            query = query.ilike("doctor", session.name.trim())
         }
 
         const { data, error } = await query.order("date", { ascending: false })

@@ -248,9 +248,9 @@ export default function MedicalRecordsPage() {
               <Table>
                 <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50">
                   <TableRow className="hover:bg-transparent border-slate-200 dark:border-slate-800">
+                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Sr No</TableHead>
                     <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Record ID</TableHead>
                     <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Patient Name</TableHead>
-                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Patient ID</TableHead>
                     <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Record Type</TableHead>
                     <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Date</TableHead>
                     <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Doctor</TableHead>
@@ -259,11 +259,13 @@ export default function MedicalRecordsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedRecords.map((record) => (
+                  {paginatedRecords.map((record, index) => (
                     <TableRow key={record.id} className="hover:bg-blue-500/5 dark:hover:bg-blue-400/5 border-slate-100 dark:border-slate-800 transition-colors">
+                      <TableCell className="text-xs font-bold text-slate-400">
+                        {((currentPage - 1) * itemsPerPage) + index + 1}
+                      </TableCell>
                       <TableCell className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{record.id}</TableCell>
                       <TableCell className="font-black text-slate-900 dark:text-white">{record.patient_name}</TableCell>
-                      <TableCell className="font-mono text-xs text-slate-500">{record.patient_id}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <div className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg">
@@ -366,10 +368,6 @@ export default function MedicalRecordsPage() {
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Patient Name</p>
                   <p className="font-black text-slate-900 dark:text-white">{selectedRecord.patient_name}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Patient ID</p>
-                  <p className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{selectedRecord.patient_id}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Record Type</p>

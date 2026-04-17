@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { getAuthSession } from "@/lib/auth"
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
         const session = await getAuthSession()
         if (!session) {
@@ -11,14 +11,32 @@ export async function GET() {
 
         let query = supabase.from("medicalrecords").select("*").order("created_at", { ascending: false })
 
-        // Hospital filtering skipped for medicalrecords as the column does not exist
-        // if (session.role !== "SUPER_ADMIN") {
-        //     if (!session.hospital_id) return NextResponse.json({ error: "No hospital assigned" }, { status: 403 })
-        //     query = query.eq("hospital_id", session.hospital_id)
-        // }
+        const { searchParams } = new URL(request.url)
+        const patientId = searchParams.get("patientId") || searchParams.get("patient_id")
 
         if (session.role === "DOCTOR") {
-            query = query.ilike("doctor", session.name.trim())
+            if (patientId) {
+                // Check if patient has visited the doctor's hospital
+                const { data: apt } = await supabase
+                    .from("appointments")
+                    .select("id")
+                    .eq("patient_id", patientId)
+                    .eq("hospital_id", session.hospital_id)
+                    .limit(1)
+
+                if (apt && apt.length > 0) {
+                    // Authorized to see all records for this patient
+                    query = query.eq("patient_id", patientId)
+                } else {
+                    // Fallback to records where doctor name matches
+                    query = query.eq("patient_id", patientId).ilike("doctor", session.name.trim())
+                }
+            } else {
+                // General list: filter by doctor name
+                query = query.ilike("doctor", session.name.trim())
+            }
+        } else if (patientId) {
+            query = query.eq("patient_id", patientId)
         }
 
         const { data, error } = await query
@@ -31,13 +49,14 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+    let body: any = null
     try {
         const session = await getAuthSession()
         if (!session) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        const body = await request.json()
+        body = await request.json()
         const mrData = {
             id: body.id || `MR-${Math.floor(10000 + Math.random() * 90000)}`,
             patient_name: body.patientName || body.patient_name,

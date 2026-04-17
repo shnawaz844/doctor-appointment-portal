@@ -200,7 +200,7 @@ export default function PrescriptionsPage() {
                     <TableRow className="hover:bg-transparent border-slate-200/50 dark:border-slate-800/50">
                       <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12 w-16">S.No</TableHead>
                       <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Patient Name</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">OPD NO</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Prescription ID</TableHead>
                       <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Medications</TableHead>
                       <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Doctor</TableHead>
                       <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Issued Date</TableHead>
@@ -215,7 +215,7 @@ export default function PrescriptionsPage() {
                           {((currentPage - 1) * itemsPerPage) + index + 1}
                         </TableCell>
                         <TableCell className="font-bold text-slate-900 dark:text-white py-4">{rx.patient_name}</TableCell>
-                        <TableCell className="font-mono text-[11px] text-slate-500 py-4">{rx.patient_id}</TableCell>
+                        <TableCell className="font-mono text-[11px] text-slate-500 py-4">{rx.id}</TableCell>
                         <TableCell className="py-4">
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">

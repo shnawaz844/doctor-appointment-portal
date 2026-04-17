@@ -190,7 +190,7 @@ export default function OPDListPage() {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search name, mobile, OPD, UHID..."
+                  placeholder={user?.role === "DOCTOR" ? "Search name, mobile, OPD..." : "Search name, mobile, OPD, UHID..."}
                   className="pl-10 h-10 sm:h-11 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl font-medium"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -287,11 +287,15 @@ export default function OPDListPage() {
                       <TableRow>
                         <TableHead className="w-10">S.no</TableHead>
                         <TableHead>OPD No</TableHead>
-                        <TableHead>UHID</TableHead>
-                        <TableHead>Token No</TableHead>
+                        {user?.role !== "DOCTOR" && (
+                          <>
+                            <TableHead>UHID</TableHead>
+                            <TableHead>Token No</TableHead>
+                          </>
+                        )}
                         <TableHead>Patient Name</TableHead>
                         <TableHead>Age/Sex</TableHead>
-                        <TableHead>Phone / UCCN</TableHead>
+                        <TableHead>Phone</TableHead>
                         <TableHead>Consultant</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Valid Upto</TableHead>
@@ -308,16 +312,16 @@ export default function OPDListPage() {
                             <TableRow key={opd.id || opd.opd_no}>
                               <TableCell className="font-mono text-[11px] text-muted-foreground">{startIndex + index + 1}</TableCell>
                               <TableCell className="font-mono text-sm font-medium">{opd.opd_no}</TableCell>
-                              <TableCell className="font-mono text-sm">{opd.uhid_no}</TableCell>
-                              <TableCell>{opd.token_no}</TableCell>
+                              {user?.role !== "DOCTOR" && (
+                                <>
+                                  <TableCell className="font-mono text-sm">{opd.uhid_no}</TableCell>
+                                  <TableCell>{opd.token_no}</TableCell>
+                                </>
+                              )}
                               <TableCell className="font-medium">{opd.patient_name}</TableCell>
                               <TableCell className="text-muted-foreground">{opd.age_sex}</TableCell>
                               <TableCell className="text-muted-foreground font-medium">
-                                {opd.unique_citizen_card_number ? (
-                                  <span className="text-blue-600 dark:text-blue-400">{opd.unique_citizen_card_number}</span>
-                                ) : (
-                                  opd.mobile_no
-                                )}
+                                {opd.mobile_no}
                               </TableCell>
                               <TableCell>
                                 <div className="flex flex-col">
@@ -334,7 +338,7 @@ export default function OPDListPage() {
                                 </div>
                               </TableCell>
                               <TableCell className="text-muted-foreground">
-                                {(opd.unique_citizen_card_number || opd.patient_type === "Online Client") ? "Null" : opd.valid_upto}
+                                {opd.valid_upto}
                               </TableCell>
                               {user?.role === "DOCTOR" && (
                                 <TableCell className="text-center">
@@ -356,7 +360,7 @@ export default function OPDListPage() {
                         })
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={user?.role === "DOCTOR" ? 11 : 10} className="text-center text-muted-foreground py-8">
+                          <TableCell colSpan={user?.role === "DOCTOR" ? 9 : 10} className="text-center text-muted-foreground py-8">
                             No OPD registrations found matching your criteria
                           </TableCell>
                         </TableRow>
