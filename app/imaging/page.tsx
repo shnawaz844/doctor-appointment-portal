@@ -78,10 +78,10 @@ export default function ImagingPage() {
     const matchesYear = yearFilter === "all" || study.year === yearFilter
     const matchesDoctor = doctorFilter === "all" || study.doctor === doctorFilter
     const matchesStudyType = studyTypeFilter === "all" || study.study_type === studyTypeFilter
-    const matchesSearch = 
+    const matchesSearch =
       study.patient_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       study.id.toLowerCase().includes(searchQuery.toLowerCase())
-    
+
     return matchesModality && matchesBodyPart && matchesYear && matchesDoctor && matchesStudyType && matchesSearch
   })
 
@@ -199,7 +199,7 @@ export default function ImagingPage() {
                     <SelectItem value="all">All Doctors</SelectItem>
                     {uniqueDoctors.map((doc) => (
                       <SelectItem key={doc} value={doc}>
-                        {doc}
+                        {doc && doc.trim() ? doc : "null"}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -246,12 +246,11 @@ export default function ImagingPage() {
           </div>
         ) : (
           <div className="glass-premium rounded-3xl p-4 md:p-8 hover:shadow-2xl transition-all animate-in fade-in slide-in-from-bottom-6 duration-1000">
-             <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto bg-white/30 dark:bg-slate-950/30">
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto bg-white/30 dark:bg-slate-950/30">
               <Table>
                 <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50">
                   <TableRow className="hover:bg-transparent border-slate-200 dark:border-slate-800">
                     <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Sr No</TableHead>
-                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Study ID</TableHead>
                     <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Patient Name</TableHead>
                     <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Study Type</TableHead>
                     <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Body Part</TableHead>
@@ -266,7 +265,6 @@ export default function ImagingPage() {
                       <TableCell className="text-xs font-bold text-slate-400">
                         {((currentPage - 1) * itemsPerPage) + index + 1}
                       </TableCell>
-                      <TableCell className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{study.id}</TableCell>
                       <TableCell className="font-black text-slate-900 dark:text-white">{study.patient_name}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -278,7 +276,9 @@ export default function ImagingPage() {
                       </TableCell>
                       <TableCell className="text-sm font-medium text-slate-600 dark:text-slate-400">{study.body_part}</TableCell>
                       <TableCell className="text-sm font-medium text-slate-600 dark:text-slate-400">{study.date}</TableCell>
-                      <TableCell className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Dr. {study.doctor}</TableCell>
+                      <TableCell className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                        {study.doctor && study.doctor.trim() ? (study.doctor.startsWith("Dr.") ? study.doctor : `Dr. ${study.doctor}`) : "null"}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-1 justify-end">
                           <Button variant="ghost" size="icon" onClick={() => openImageView(study)} className="hover:bg-blue-500/10 hover:text-blue-600 dark:hover:bg-blue-400/10 rounded-xl" title="View Details">
@@ -420,7 +420,9 @@ export default function ImagingPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Doctor Assigned</p>
-                  <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">Dr. {selectedImage.doctor}</p>
+                  <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                    {selectedImage.doctor && selectedImage.doctor.trim() ? (selectedImage.doctor.startsWith("Dr.") ? selectedImage.doctor : `Dr. ${selectedImage.doctor}`) : "null"}
+                  </p>
                 </div>
                 {selectedImage.ai_flag && (
                   <div>
@@ -450,31 +452,33 @@ export default function ImagingPage() {
           )}
         </DialogContent>
       </Dialog>
-      
+
       {/* Full Screen Overlay */}
       {isFullScreen && selectedImage && (
         <div className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center p-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => {
               setIsFullScreen(false)
               setIsDialogOpen(true)
-            }} 
+            }}
             className="absolute top-4 right-4 text-white hover:bg-white/10 rounded-full z-[110]"
           >
             <X className="h-8 w-8" />
           </Button>
           <div className="relative w-full h-full flex items-center justify-center">
-             <img
-                src={selectedImage.thumbnail || "/placeholder.svg"}
-                alt={selectedImage.study_type}
-                className="max-w-full max-h-full object-contain shadow-2xl"
-              />
+            <img
+              src={selectedImage.thumbnail || "/placeholder.svg"}
+              alt={selectedImage.study_type}
+              className="max-w-full max-h-full object-contain shadow-2xl"
+            />
           </div>
           <div className="absolute bottom-10 left-10 text-white/80 p-6 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10">
             <h2 className="text-2xl font-black mb-1">{selectedImage.study_type}</h2>
-            <p className="font-bold text-emerald-400">Dr. {selectedImage.doctor}</p>
+            <p className="font-bold text-emerald-400">
+              {selectedImage.doctor && selectedImage.doctor.trim() ? (selectedImage.doctor.startsWith("Dr.") ? selectedImage.doctor : `Dr. ${selectedImage.doctor}`) : "null"}
+            </p>
             <p className="text-sm opacity-60 mt-2">{selectedImage.patient_name} • {selectedImage.date}</p>
           </div>
         </div>

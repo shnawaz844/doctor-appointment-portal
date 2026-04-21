@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CreateAppointmentDialog } from "@/components/create-appointment-dialog"
 import { EditAppointmentDialog } from "@/components/edit-appointment-dialog"
 import { CreatePrescriptionDialog } from "@/components/create-prescription-dialog"
+import { StatCard } from "@/components/ui/stat-card"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 
@@ -202,47 +203,30 @@ export default function AppointmentsPage() {
 
         {/* Appointment Stats */}
         <div className="grid gap-4 md:gap-8 grid-cols-1 md:grid-cols-3 mb-8 md:mb-10">
-          <Card className="group relative overflow-hidden border-none bg-blue-500/10 dark:bg-blue-600/20 backdrop-blur-xl border-t border-l border-white/40 dark:border-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-500">
-            <div className="absolute inset-0 bg-linear-to-br from-blue-500/20 via-blue-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-              <CardTitle className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-[0.2em]">Total Appointments</CardTitle>
-              <div className="p-2.5 bg-blue-500/20 dark:bg-blue-400/20 rounded-xl group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-blue-500/20">
-                <Calendar className="h-5 w-5 text-blue-700 dark:text-blue-300 group-hover:text-white transition-colors" />
-              </div>
-            </CardHeader>
-            <CardContent className="relative z-10 pt-4">
-              <div className="text-4xl font-black tracking-tight text-blue-900 dark:text-white group-hover:translate-x-1 transition-transform duration-500">{stats.total}</div>
-              <p className="text-xs font-medium text-blue-700/70 dark:text-blue-300/70 mt-3">This month</p>
-            </CardContent>
-          </Card>
-
-          <Card className="group relative overflow-hidden border-none bg-emerald-500/10 dark:bg-emerald-600/20 backdrop-blur-xl border-t border-l border-white/40 dark:border-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-500">
-            <div className="absolute inset-0 bg-linear-to-br from-emerald-500/20 via-emerald-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-              <CardTitle className="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-[0.2em]">Scheduled</CardTitle>
-              <div className="p-2.5 bg-emerald-500/20 dark:bg-emerald-400/20 rounded-xl group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-emerald-500/20">
-                <Clock className="h-5 w-5 text-emerald-700 dark:text-emerald-300 group-hover:text-white transition-colors" />
-              </div>
-            </CardHeader>
-            <CardContent className="relative z-10 pt-4">
-              <div className="text-4xl font-black tracking-tight text-emerald-900 dark:text-white group-hover:translate-x-1 transition-transform duration-500">{stats.scheduled}</div>
-              <p className="text-xs font-medium text-emerald-700/70 dark:text-emerald-300/70 mt-3">Upcoming</p>
-            </CardContent>
-          </Card>
-
-          <Card className="group relative overflow-hidden border-none bg-amber-500/10 dark:bg-amber-600/20 backdrop-blur-xl border-t border-l border-white/40 dark:border-amber-500/30 hover:shadow-2xl hover:shadow-amber-500/20 transition-all duration-500">
-            <div className="absolute inset-0 bg-linear-to-br from-amber-500/20 via-amber-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-              <CardTitle className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-[0.2em]">Completed</CardTitle>
-              <div className="p-2.5 bg-amber-500/20 dark:bg-amber-400/20 rounded-xl group-hover:scale-110 group-hover:bg-amber-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-amber-500/20">
-                <Loader2 className="h-5 w-5 text-amber-700 dark:text-amber-300 group-hover:text-white transition-colors" />
-              </div>
-            </CardHeader>
-            <CardContent className="relative z-10 pt-4">
-              <div className="text-4xl font-black tracking-tight text-amber-900 dark:text-white group-hover:translate-x-1 transition-transform duration-500">{stats.completed}</div>
-              <p className="text-xs font-medium text-amber-700/70 dark:text-amber-300/70 mt-3">This month</p>
-            </CardContent>
-          </Card>
+          <StatCard
+            label="Total Appointments"
+            value={stats.total}
+            icon={Calendar}
+            subLabel="This month"
+            colorScheme="blue"
+            loading={loading}
+          />
+          <StatCard
+            label="Scheduled"
+            value={stats.scheduled}
+            icon={Clock}
+            subLabel="Upcoming"
+            colorScheme="emerald"
+            loading={loading}
+          />
+          <StatCard
+            label="Completed"
+            value={stats.completed}
+            icon={Loader2}
+            subLabel="This month"
+            colorScheme="amber"
+            loading={loading}
+          />
         </div>
 
         {/* Tabs for Filtering - scrollable on mobile */}

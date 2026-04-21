@@ -5,8 +5,6 @@ import Link from "next/link"
 import {
   LayoutDashboard,
   Users,
-  Search,
-  FolderTree,
   FileImage,
   Settings,
   Activity,
@@ -15,16 +13,15 @@ import {
   FlaskConical,
   Pill,
   ClipboardList,
-  MessageSquare,
   LogOut,
   ShieldCheck,
-  BarChart,
-  User as UserIcon,
-  Mail,
   Building,
   Lock,
   Camera,
   Loader2,
+  Stethoscope,
+  Mail,
+  ChevronRight,
 } from "lucide-react"
 import { useRef } from "react"
 import { toast } from "sonner"
@@ -62,85 +59,112 @@ const navItems = [
     href: "/",
     icon: LayoutDashboard,
     roles: ["ADMIN", "DOCTOR", "STAFF"],
+    color: "text-violet-500",
+    bg: "bg-violet-500/10",
   },
   {
     title: "OPD",
     href: "/opd",
-    icon: ClipboardList,
+    icon: Stethoscope,
     roles: ["STAFF", "ADMIN"],
+    color: "text-cyan-500",
+    bg: "bg-cyan-500/10",
   },
   {
     title: "OPD List",
     href: "/opd-list",
     icon: ClipboardList,
     roles: ["STAFF", "ADMIN", "DOCTOR"],
+    color: "text-teal-500",
+    bg: "bg-teal-500/10",
   },
   {
     title: "Appointments",
     href: "/appointments",
     icon: Calendar,
     roles: ["ADMIN", "DOCTOR", "STAFF"],
+    color: "text-indigo-500",
+    bg: "bg-indigo-500/10",
   },
   {
     title: "Patients",
     href: "/patients",
     icon: Users,
     roles: ["ADMIN", "DOCTOR", "STAFF"],
+    color: "text-blue-500",
+    bg: "bg-blue-500/10",
   },
   {
     title: "Doctors",
     href: "/doctors",
     icon: Users,
     roles: ["ADMIN"],
+    color: "text-purple-500",
+    bg: "bg-purple-500/10",
   },
   {
     title: "Specialties",
     href: "/specialties",
     icon: ClipboardList,
     roles: ["ADMIN"],
+    color: "text-fuchsia-500",
+    bg: "bg-fuchsia-500/10",
   },
   {
     title: "Lab Results",
     href: "/lab-results",
     icon: FlaskConical,
     roles: ["ADMIN", "DOCTOR"],
+    color: "text-emerald-500",
+    bg: "bg-emerald-500/10",
   },
   {
     title: "Prescriptions",
     href: "/prescriptions",
     icon: Pill,
     roles: ["ADMIN", "DOCTOR"],
+    color: "text-green-500",
+    bg: "bg-green-500/10",
   },
   {
     title: "Billing & Invoices",
     href: "/billing",
     icon: CreditCard,
     roles: ["ADMIN", "STAFF"],
+    color: "text-amber-500",
+    bg: "bg-amber-500/10",
   },
   {
     title: "Medical Records",
     href: "/medical-records",
     icon: ClipboardList,
     roles: ["ADMIN", "DOCTOR"],
+    color: "text-orange-500",
+    bg: "bg-orange-500/10",
   },
   {
     title: "Imaging",
     href: "/imaging",
     icon: FileImage,
     roles: ["ADMIN", "DOCTOR"],
+    color: "text-pink-500",
+    bg: "bg-pink-500/10",
   },
-
   {
     title: "System Settings",
     href: "/settings",
     icon: Settings,
     roles: ["ADMIN"],
+    color: "text-slate-500",
+    bg: "bg-slate-500/10",
   },
   {
     title: "Hospitals",
     href: "/super-admin/hospitals",
     icon: Building,
     roles: ["SUPER_ADMIN"],
+    color: "text-rose-500",
+    bg: "bg-rose-500/10",
   },
 ]
 
@@ -152,6 +176,7 @@ export function AppSidebar() {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const isCollapsed = state === "collapsed"
 
   useEffect(() => {
     async function fetchUser() {
@@ -181,26 +206,17 @@ export function AppSidebar() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !user) return
-
     setUploading(true)
     try {
       const formData = new FormData()
       formData.append("file", file)
-      
-      const uploadRes = await fetch("/api/auth/profile/image", {
-        method: "POST",
-        body: formData,
-      })
-      
+      const uploadRes = await fetch("/api/auth/profile/image", { method: "POST", body: formData })
       const uploadData = await uploadRes.json()
       if (!uploadRes.ok) throw new Error(uploadData.error || "Upload failed")
-
       const imageUrl = uploadData.imageUrl || uploadData.url
-
       setUser({ ...user, image: imageUrl })
       toast.success("Profile image updated successfully")
     } catch (error: any) {
-      console.error("Image upload error:", error)
       toast.error(error.message || "Failed to update profile image")
     } finally {
       setUploading(false)
@@ -213,84 +229,97 @@ export function AppSidebar() {
     : navItems.filter((item) => user && item.roles.includes(user.role.toUpperCase()))
   const profileImage = resolveImageUrl(user?.image)
 
+  const initials = user?.name?.substring(0, 2).toUpperCase() || "??"
+
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar shadow-xl">
-      <SidebarHeader className={cn(
-        "h-auto py-5 border-b border-sidebar-border/50 px-4 bg-linear-to-b from-sidebar-accent/30 to-transparent transition-all duration-300",
-        state === "collapsed" && "px-2 py-4"
-      )}>
+    <Sidebar
+      collapsible="icon"
+      className="border-r-0 bg-sidebar shadow-2xl shadow-black/10"
+    >
+      {/* ── Header ── */}
+      <SidebarHeader
+        className={cn(
+          "border-b border-sidebar-border/60 transition-all duration-300",
+          isCollapsed ? "px-2 py-4" : "px-4 py-5"
+        )}
+      >
         <div className={cn(
-          "flex items-center group transition-all duration-300",
-          state === "collapsed" ? "justify-center" : "justify-between gap-3.5"
+          "flex items-center transition-all duration-300",
+          isCollapsed ? "justify-center" : "justify-between"
         )}>
-          <Link href="/" className="flex items-center gap-3.5 cursor-pointer hover:opacity-90 transition-opacity">
+          <Link href="/" className="flex items-center gap-3 group">
+            {/* Logo Icon */}
             <div className={cn(
-              "bg-linear-to-br from-primary/20 to-primary/5 rounded-2xl shrink-0 shadow-lg shadow-primary/5 border border-primary/10 transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 group-hover:shadow-primary/10 flex items-center justify-center",
-              state === "collapsed" ? "w-8 h-8 p-1.5" : "p-2.5"
+              "shrink-0 rounded-2xl flex items-center justify-center",
+              "bg-gradient-to-br from-primary/90 to-violet-600",
+              "shadow-lg shadow-primary/30 transition-all duration-500",
+              "group-hover:shadow-primary/50 group-hover:scale-105 group-hover:rotate-3",
+              isCollapsed ? "p-1.5 w-9 h-9" : "p-2 w-10 h-10"
             )}>
-              <Activity className={cn("text-primary", state === "collapsed" ? "h-4 w-4" : "h-5 w-5")} />
+              <Stethoscope className={cn("text-white", isCollapsed ? "h-4 w-4" : "h-5 w-5")} />
             </div>
-            {state === "expanded" && (
-              <div className="flex flex-col min-w-0 animate-in fade-in duration-500">
-                <span className="text-[18px] font-black uppercase tracking-[0.2em] text-[#e05d38] mb-0.5 drop-shadow-sm">
-                  Appointment
+
+            {!isCollapsed && (
+              <div className="flex flex-col min-w-0 animate-in fade-in slide-in-from-left-2 duration-300">
+                <span
+                  className="text-base font-black uppercase tracking-widest leading-none"
+                  style={{
+                    background: "linear-gradient(135deg, oklch(0.55 0.22 285), oklch(0.62 0.18 200))",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >
+                  Doctor Appointment Portal
                 </span>
-                <span className="text-sm font-black tracking-tight text-sidebar-foreground leading-none whitespace-normal mb-1.5" title="Doctor's Appointments">
-                  Management System
+                <span className="text-[10px] font-bold tracking-wider text-muted-foreground/80 uppercase mt-0.5">
+                  {user?.hospital_name || "Management System"}
                 </span>
-                {user?.role !== "SUPER_ADMIN" && user?.hospital_name && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="h-px w-4 bg-primary/30" />
-                    <span className="text-[9px] font-bold text-muted-foreground/80 uppercase tracking-wider whitespace-normal" title={`Supported by ${user.hospital_name}`}>
-                      {user.hospital_name}
-                    </span>
-                  </div>
-                )}
               </div>
             )}
           </Link>
-          {state === "expanded" && (
+
+          {!isCollapsed && (
             <TooltipProvider delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <SidebarTrigger className="h-8 w-8 rounded-lg border border-sidebar-border/50 bg-sidebar-accent/50 hover:bg-primary/10 hover:text-primary transition-all duration-300 mb-12 ml-1" />
+                  <SidebarTrigger className="h-8 w-8 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all duration-300" />
                 </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>Collapse Sidebar</p>
-                </TooltipContent>
+                <TooltipContent side="right"><p>Collapse Sidebar</p></TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )}
         </div>
-        {state === "collapsed" && (
+
+        {isCollapsed && (
           <div className="flex justify-center mt-2">
             <TooltipProvider delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <SidebarTrigger className="h-8 w-8 rounded-lg border border-sidebar-border/50 bg-sidebar-accent/50 hover:bg-primary/10 hover:text-primary transition-all duration-300" />
+                  <SidebarTrigger className="h-8 w-8 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/50 hover:bg-primary/10 hover:text-primary transition-all duration-300" />
                 </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>Expand Sidebar</p>
-                </TooltipContent>
+                <TooltipContent side="right"><p>Expand Sidebar</p></TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
         )}
       </SidebarHeader>
 
-      <SidebarContent className={cn(
-        "transition-all duration-300",
-        state === "collapsed" ? "p-2" : "p-4"
-      )}>
+      {/* ── Navigation ── */}
+      <SidebarContent className={cn("transition-all duration-300 py-3", isCollapsed ? "px-2" : "px-3")}>
         {loading ? (
           <div className="space-y-2">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-10 w-full animate-pulse bg-sidebar-accent/50 rounded-xl" />
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="h-10 w-full shimmer rounded-xl bg-sidebar-accent/30"
+                style={{ animationDelay: `${i * 0.08}s` }}
+              />
             ))}
           </div>
         ) : (
-          <SidebarMenu className="space-y-1">
-            {filteredNavItems.map((item) => {
+          <SidebarMenu className="space-y-0.5">
+            {filteredNavItems.map((item, idx) => {
               const isActive = pathname === item.href
               const Icon = item.icon
 
@@ -301,26 +330,41 @@ export function AppSidebar() {
                     isActive={isActive}
                     tooltip={item.title}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl py-2.5 text-sm font-semibold transition-all duration-300 group",
-                      state === "collapsed" ? "justify-center px-0 w-10 h-10 mx-auto" : "px-3",
+                      "flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-200 group/nav",
+                      isCollapsed ? "justify-center px-0 w-10 h-10 mx-auto py-0" : "px-3 py-2.5",
                       isActive
-                        ? "bg-primary/10 text-primary border border-primary/20 shadow-sm shadow-primary/5 scale-[1.02]"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:translate-x-0.5",
+                        ? [
+                          "bg-primary/10 border border-primary/20",
+                          "shadow-sm shadow-primary/10",
+                          "text-primary",
+                        ]
+                        : [
+                          "hover:bg-sidebar-accent/70",
+                          "text-sidebar-foreground/65 hover:text-sidebar-foreground",
+                          "border border-transparent",
+                        ]
                     )}
                   >
                     <Link href={item.href} className="flex items-center w-full gap-3">
-                      <Icon className={cn(
-                        "transition-all duration-300",
-                        state === "collapsed" ? "h-5 w-5" : "h-4.5 w-4.5",
-                        isActive ? "text-primary scale-110" : "text-primary/60 group-hover:text-primary"
-                      )} />
-                      {state === "expanded" && (
-                        <span className={cn(
-                          "transition-colors duration-300",
-                          isActive ? "text-primary" : "text-sidebar-foreground/70 group-hover:text-sidebar-foreground"
-                        )}>
+                      <div className={cn(
+                        "flex items-center justify-center rounded-lg transition-all duration-300 shrink-0",
+                        isCollapsed ? "w-full h-full rounded-xl" : "w-7 h-7",
+                        isActive
+                          ? `${item.bg} ${item.color} scale-105`
+                          : `group-hover/nav:${item.bg} ${item.color} opacity-70 group-hover/nav:opacity-100`
+                      )}>
+                        <Icon className={cn(
+                          "transition-all duration-300",
+                          isCollapsed ? "h-5 w-5" : "h-4 w-4"
+                        )} />
+                      </div>
+                      {!isCollapsed && (
+                        <span className="transition-all duration-200 font-semibold">
                           {item.title}
                         </span>
+                      )}
+                      {!isCollapsed && isActive && (
+                        <ChevronRight className="h-3.5 w-3.5 ml-auto opacity-50" />
                       )}
                     </Link>
                   </SidebarMenuButton>
@@ -331,14 +375,13 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
+      {/* ── Footer ── */}
       <SidebarFooter className={cn(
-        "border-t border-sidebar-border transition-all duration-300",
-        state === "collapsed" ? "p-1.5 gap-2" : "p-4 gap-4"
+        "border-t border-sidebar-border/60 transition-all duration-300",
+        isCollapsed ? "p-2 gap-2" : "p-3 gap-3"
       )}>
-        <div className={cn(
-          "flex items-center",
-          state === "collapsed" ? "flex-col gap-2" : "flex-col gap-3"
-        )}>
+        <div className={cn("flex items-center", isCollapsed ? "flex-col gap-2" : "flex-col gap-2")}>
+          {/* User Profile Dialog */}
           {user && (
             <Dialog>
               <TooltipProvider delayDuration={0}>
@@ -346,115 +389,122 @@ export function AppSidebar() {
                   <TooltipTrigger asChild>
                     <DialogTrigger asChild>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         className={cn(
-                          "flex items-center justify-start gap-3 h-auto py-2 px-3 rounded-xl border-sidebar-border/50 bg-sidebar-accent/50 hover:bg-primary/10 hover:border-primary/30 transition-all duration-300 group",
-                          state === "collapsed" ? "w-10 h-10 p-0 justify-center" : "w-full"
+                          "flex items-center justify-start gap-3 h-auto rounded-xl",
+                          "border border-sidebar-border/50 bg-sidebar-accent/40",
+                          "hover:bg-primary/8 hover:border-primary/25 hover:shadow-sm hover:shadow-primary/10",
+                          "transition-all duration-300 group/profile",
+                          isCollapsed ? "w-10 h-10 p-0 justify-center" : "w-full py-2.5 px-3"
                         )}
                       >
-                        <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-primary/20 shadow-inner group-hover:text-primary">
-                          {profileImage ? (
-                            <img src={profileImage} alt={user.name} className="h-full w-full object-cover" />
-                          ) : (
-                            <div className="h-full w-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">
-                              {user.name.substring(0, 2).toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-                        {state === "expanded" && (
-                            <div className="flex flex-col items-start min-w-0 text-left animate-in fade-in slide-in-from-left-2 duration-300">
-                              <span className="text-sm font-bold text-sidebar-foreground truncate w-full group-hover:text-primary">
-                                {user.name}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                <ShieldCheck className="h-3 w-3 text-emerald-500" />
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider group-hover:text-primary">
-                                  {user.role}
-                                </span>
+                        <div className="relative shrink-0">
+                          <div className={cn(
+                            "overflow-hidden rounded-full border-2 border-primary/20",
+                            "ring-2 ring-transparent group-hover/profile:ring-primary/20 transition-all duration-300",
+                            isCollapsed ? "h-8 w-8" : "h-8 w-8"
+                          )}>
+                            {profileImage ? (
+                              <img src={profileImage} alt={user.name} className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="h-full w-full bg-gradient-to-br from-primary/80 to-violet-600 flex items-center justify-center text-white text-[10px] font-black">
+                                {initials}
                               </div>
-                              {user.specialty && (
-                                <span className="text-[9px] font-bold text-primary/80 uppercase tracking-tight truncate w-full mt-0.5 group-hover:text-primary animate-in slide-in-from-top-1 duration-300">
-                                  {user.specialty}
-                                </span>
-                              )}
+                            )}
+                          </div>
+                          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-sidebar shadow-sm shadow-emerald-500/50" />
+                        </div>
+
+                        {!isCollapsed && (
+                          <div className="flex flex-col items-start min-w-0 text-left animate-in fade-in duration-300">
+                            <span className="text-sm font-bold text-sidebar-foreground truncate w-full group-hover/profile:text-primary transition-colors">
+                              {user.name}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <ShieldCheck className="h-2.5 w-2.5 text-emerald-500" />
+                              <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+                                {user.role}
+                              </span>
                             </div>
+                          </div>
                         )}
                       </Button>
                     </DialogTrigger>
                   </TooltipTrigger>
-                  {state === "collapsed" && (
+                  {isCollapsed && (
                     <TooltipContent side="right">
-                      <p>{user.name} ({user.role}{user.specialty ? ` - ${user.specialty}` : ''})</p>
+                      <p>{user.name} ({user.role})</p>
                     </TooltipContent>
                   )}
                 </Tooltip>
               </TooltipProvider>
-              <DialogContent className="sm:max-w-[425px] glass-premium border-none shadow-2xl overflow-hidden">
-                <div className="absolute top-0 right-0 p-8 opacity-10 -z-10 text-primary">
-                  <UserIcon className="h-32 w-32 rotate-12" />
-                </div>
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-black">User Profile</DialogTitle>
-                  <DialogDescription className="font-medium text-muted-foreground">
-                    Your account details and permissions
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="mt-6 space-y-6">
-                  <div className="flex items-center gap-4 p-4 rounded-2xl bg-primary/5 border border-primary/10">
-                    <div className="relative group/avatar">
-                      <Avatar className="h-20 w-20 border-2 border-primary/20 shadow-xl transition-all duration-300 group-hover/avatar:border-primary/40">
-                        <AvatarImage src={profileImage} className="object-cover" />
-                        <AvatarFallback className="bg-primary/10 text-primary text-2xl font-black">
-                          {user.name.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <>
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleImageUpload}
-                          accept="image/*"
-                          className="hidden"
-                        />
-                        <Button
-                          size="icon"
-                          variant="secondary"
-                          className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full shadow-lg border border-primary/10 hover:bg-primary hover:text-white transition-all duration-300"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={uploading}
-                        >
-                          {uploading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Camera className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-black text-foreground">{user.name}</h3>
-                      <p className="text-sm font-bold text-primary flex items-center gap-1">
-                        <ShieldCheck className="h-4 w-4" />
-                        {user.role}
-                      </p>
-                      {user.specialty && (
-                        <p className="text-xs font-bold text-muted-foreground mt-1 flex items-center gap-1">
-                           <Activity className="h-3 w-3 text-primary/60" />
-                           {user.specialty}
-                        </p>
-                      )}
-                    </div>
-                  </div>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-white/40 dark:bg-slate-900/40 border border-white/20 dark:border-slate-800">
-                      <Mail className="h-5 w-5 text-primary" />
+              {/* Profile Dialog Content */}
+              <DialogContent className="sm:max-w-[420px] bg-popover border border-border shadow-2xl overflow-hidden rounded-3xl p-0">
+                {/* Decorative top bar */}
+                <div className="h-1.5 w-full bg-gradient-to-r from-primary via-violet-500 to-cyan-500 rounded-t-3xl" />
+                <div className="p-6">
+                  <DialogHeader className="mb-6">
+                    <DialogTitle className="text-2xl font-black">User Profile</DialogTitle>
+                    <DialogDescription className="font-medium text-muted-foreground">
+                      Your account details and permissions
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-5">
+                    {/* Avatar Section */}
+                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-primary/5 border border-primary/10">
+                      <div className="relative group/avatar">
+                        <Avatar className="h-20 w-20 border-2 border-primary/25 shadow-xl shadow-primary/10 transition-all duration-300 group-hover/avatar:border-primary/50">
+                          <AvatarImage src={profileImage} className="object-cover" />
+                          <AvatarFallback className="bg-gradient-to-br from-primary/70 to-violet-600 text-white text-2xl font-black">
+                            {initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <>
+                          <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleImageUpload}
+                            accept="image/*"
+                            className="hidden"
+                          />
+                          <Button
+                            size="icon"
+                            variant="secondary"
+                            className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full shadow-lg border border-primary/10 hover:bg-primary hover:text-white transition-all duration-300"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
+                          >
+                            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                          </Button>
+                        </>
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black">{user.name}</h3>
+                        <p className="text-sm font-bold text-primary flex items-center gap-1.5 mt-0.5">
+                          <ShieldCheck className="h-4 w-4" />{user.role}
+                        </p>
+                        {user.specialty && (
+                          <p className="text-xs font-semibold text-muted-foreground mt-1 flex items-center gap-1">
+                            <Activity className="h-3 w-3 text-primary/60" />{user.specialty}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Email */}
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border/50">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <Mail className="h-4 w-4 text-primary" />
+                      </div>
                       <div>
                         <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Email Address</p>
                         <p className="text-sm font-bold">{user.email}</p>
                       </div>
                     </div>
 
+                    {/* Change Password */}
                     {(user.role === "DOCTOR" || user.role === "STAFF") && (
                       <ChangePasswordDialog
                         trigger={
@@ -471,12 +521,10 @@ export function AppSidebar() {
             </Dialog>
           )}
 
-          <div className={cn(
-            "flex items-center gap-2",
-            state === "collapsed" ? "flex-col w-full" : "flex-row w-full"
-          )}>
-            <div className={cn(state === "expanded" ? "flex-1" : "w-10 h-10")}>
-              <ModeToggle className={cn(state === "expanded" && "w-full h-12")} />
+          {/* Bottom Controls */}
+          <div className={cn("flex items-center gap-2", isCollapsed ? "flex-col w-full" : "flex-row w-full")}>
+            <div className={cn(isCollapsed ? "w-10 h-10" : "flex-1")}>
+              <ModeToggle className={cn(isCollapsed ? "" : "w-full h-10")} />
             </div>
 
             <TooltipProvider delayDuration={0}>
@@ -487,17 +535,17 @@ export function AppSidebar() {
                     variant="outline"
                     size="icon"
                     className={cn(
-                      "rounded-xl border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white hover:border-rose-500 transition-all duration-300 shadow-sm",
-                      state === "collapsed" ? "w-10 h-10" : "h-12 flex-1"
+                      "rounded-xl border-rose-500/20 text-rose-500",
+                      "hover:bg-rose-500 hover:text-white hover:border-rose-500 hover:shadow-lg hover:shadow-rose-500/20",
+                      "transition-all duration-300",
+                      isCollapsed ? "w-10 h-10" : "h-10 flex-1 px-4"
                     )}
                   >
-                    <LogOut className="h-4 w-4" />
-                    {state === "expanded" && <span className="ml-2 font-bold text-xs uppercase tracking-wider">Logout</span>}
+                    <LogOut className="h-4 w-4 shrink-0" />
+                    {!isCollapsed && <span className="ml-2 font-bold text-xs uppercase tracking-wider">Logout</span>}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side={state === "collapsed" ? "right" : "top"}>
-                  <p>Logout</p>
-                </TooltipContent>
+                <TooltipContent side={isCollapsed ? "right" : "top"}><p>Logout</p></TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>

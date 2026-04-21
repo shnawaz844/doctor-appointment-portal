@@ -46,9 +46,9 @@ export async function POST(req: Request) {
     try {
         const session = await getAuthSession()
         const body = await req.json()
-        const { name, specialtyId, specialty_id, phone, email, password, image } = body
+        const { name, specialtyId, specialty_id, phone, email, password, image, fee, emergency_fee } = body
 
-        console.log("Creating doctor:", { name, email, specialty_id: specialtyId || specialty_id })
+        console.log("Creating doctor:", { name, email, specialty_id: specialtyId || specialty_id, fee, emergency_fee })
 
         if (!name || !(specialtyId || specialty_id)) {
             return NextResponse.json({ error: "Name and Specialty are required" }, { status: 400 })
@@ -102,6 +102,8 @@ export async function POST(req: Request) {
             phone,
             email,
             image,
+            fee: fee || 0,
+            emergency_fee: emergency_fee || 0,
             hospital_id: hospitalId,
             is_active: true
         }).select().single()

@@ -6,64 +6,99 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
-import { TrendingUp, Clock, Plus, Loader2, DollarSign, FileText, Activity } from "lucide-react"
+import { TrendingUp, Clock, Plus, Loader2, IndianRupee, FileText, Activity, Calendar as CalendarIcon, Filter, Search, ChevronRight } from "lucide-react"
 import { CreateInvoiceDialog } from "@/components/create-invoice-dialog"
 import { PageHeader } from "@/components/page-header"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { StatCard } from "@/components/ui/stat-card"
+import { cn } from "@/lib/utils"
+import { format, isToday, parseISO, startOfDay, endOfDay } from "date-fns"
 
 interface BillingRecord {
   _id: string
-  invoiceId: string
-  patientName: string
-  patientId: string
+  invoice_id: string
+  patient_name: string
+  patient_id: string
   amount: number
   date: string
   service: string
   status: "Paid" | "Pending"
-  paymentMethod: "Cash" | "Online"
-  createdAt: string
+  payment_method: "Cash" | "Online"
+  created_at: string
 }
 
 export default function BillingPage() {
-  const [timeFilter, setTimeFilter] = useState<"day" | "month" | "year">("month")
+  const [activeTab, setActiveTab] = useState<string>("today")
+  const [monthFilter, setMonthFilter] = useState<string>("all")
+  const [yearFilter, setYearFilter] = useState<string>("all")
+  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined)
+  const [serviceFilter, setServiceFilter] = useState<string>("all")
+  const [methodFilter, setMethodFilter] = useState<string>("all")
+  
   const [selectedStat, setSelectedStat] = useState<"revenue" | "outstanding" | "invoices" | null>(null)
   const [invoices, setInvoices] = useState<BillingRecord[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    async function fetchInvoices() {
-      try {
-        const res = await fetch("/api/invoices", {
-          headers: {
-            "organization-id": "default-org"
-          }
-        })
-        if (!res.ok) throw new Error("Failed to fetch")
-        const data = await res.json()
-        setInvoices(data)
-      } catch (error) {
-        console.error("Failed to fetch invoices:", error)
-      } finally {
-        setLoading(false)
-      }
+  async function fetchInvoices() {
+    try {
+      const res = await fetch("/api/invoices", {
+        headers: {
+          "organization-id": "default-org"
+        }
+      })
+      if (!res.ok) throw new Error("Failed to fetch")
+      const data = await res.json()
+      setInvoices(data)
+    } catch (error) {
+      console.error("Failed to fetch invoices:", error)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchInvoices()
   }, [])
 
+  // ── Derived Data ──
+  const uniqueServices = Array.from(new Set(invoices.map(inv => inv.service))).sort()
+
+  const filteredInvoices = invoices.filter((inv) => {
+    const d = inv.date ? parseISO(inv.date) : parseISO(inv.created_at);
+    const isTodayRecord = isToday(d);
+
+    if (activeTab === "today") {
+      if (!isTodayRecord) return false;
+    } else {
+      if (isTodayRecord) return false;
+      if (monthFilter !== "all" && format(d, "MMM") !== monthFilter) return false;
+      if (yearFilter !== "all" && format(d, "yyyy") !== yearFilter) return false;
+      if (dateFilter && format(d, "yyyy-MM-dd") !== format(dateFilter, "yyyy-MM-dd")) return false;
+    }
+
+    if (serviceFilter !== "all" && inv.service !== serviceFilter) return false;
+    if (methodFilter !== "all" && inv.payment_method !== methodFilter) return false;
+
+    return true;
+  });
+
   const stats = {
-    totalRevenue: invoices.reduce((acc, curr) => curr.status === "Paid" ? acc + curr.amount : acc, 0),
-    outstanding: invoices.reduce((acc, curr) => curr.status === "Pending" ? acc + curr.amount : acc, 0),
-    totalInvoices: invoices.length,
+    totalRevenue: filteredInvoices.reduce((acc, curr) => curr.status === "Paid" ? acc + curr.amount : acc, 0),
+    pendingAmount: filteredInvoices.reduce((acc, curr) => curr.status === "Pending" ? acc + curr.amount : acc, 0),
+    pendingCount: filteredInvoices.filter(inv => inv.status === "Pending").length,
+    totalCount: filteredInvoices.length,
   }
 
   const getChartData = () => {
-    // Basic aggregation: group by month
     const monthlyGroups: Record<string, number> = {}
-    invoices.forEach(inv => {
-      const month = new Date(inv.date || inv.createdAt).toLocaleString("default", { month: "short" })
-      monthlyGroups[month] = (monthlyGroups[month] || 0) + inv.amount
+    filteredInvoices.forEach(inv => {
+      const m = format(inv.date ? parseISO(inv.date) : parseISO(inv.created_at), "MMM")
+      monthlyGroups[m] = (monthlyGroups[m] || 0) + inv.amount
     })
 
-    // Sort months correctly (simplified)
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     return months
       .filter(m => monthlyGroups[m] !== undefined)
@@ -72,7 +107,7 @@ export default function BillingPage() {
 
   const revenueBreakdown = [
     { name: "Paid", value: stats.totalRevenue },
-    { name: "Pending", value: stats.outstanding },
+    { name: "Pending", value: stats.pendingAmount },
   ]
 
   const COLORS = ["#10b981", "#f97316"]
@@ -87,80 +122,70 @@ export default function BillingPage() {
       </div>
 
       <div className="container mx-auto relative py-6 md:py-10 px-4 md:px-8">
-        <PageHeader title="Billing & Invoice" description="Manage invoices and patient billing" showSearch />
-
-        {/* Billing Stats */}
-        <div className="grid gap-4 md:gap-8 grid-cols-1 md:grid-cols-3 mb-8 md:mb-10">
-          <Card
-            className="group relative overflow-hidden border-none bg-emerald-500/10 dark:bg-emerald-600/20 backdrop-blur-xl border-t border-l border-white/40 dark:border-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-500 cursor-pointer"
-            onClick={() => setSelectedStat("revenue")}
-          >
-            <div className="absolute inset-0 bg-linear-to-br from-emerald-500/20 via-emerald-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-              <CardTitle className="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-[0.2em]">Total Revenue</CardTitle>
-              <div className="p-2.5 bg-emerald-500/20 dark:bg-emerald-400/20 rounded-xl group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-emerald-500/20">
-                <TrendingUp className="h-5 w-5 text-emerald-700 dark:text-emerald-300 group-hover:text-white transition-colors" />
+        <div className="flex flex-col gap-8 mb-10">
+          {/* Header Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Billing & Invoices</h1>
+              <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Manage hospital revenue and patient billing</p>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <div className="flex p-1 bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-slate-800">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className={cn("rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all", activeTab === "today" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-lg" : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-700/50")}
+                  onClick={() => setActiveTab("today")}
+                >
+                  Today
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className={cn("rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all", activeTab === "all" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-lg" : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-700/50")}
+                  onClick={() => setActiveTab("all")}
+                >
+                  All History
+                </Button>
               </div>
-            </CardHeader>
-            <CardContent className="relative z-10 pt-4">
-              {loading ? <Loader2 className="h-6 w-6 animate-spin text-emerald-600" /> : (
-                <>
-                  <div className="text-4xl font-black tracking-tight text-emerald-900 dark:text-white group-hover:translate-x-1 transition-transform duration-500">₹{stats.totalRevenue.toLocaleString()}</div>
-                  <div className="flex items-center mt-3">
-                    <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-100 bg-emerald-500/10 dark:bg-emerald-400/10 px-2 py-1 rounded-lg border border-emerald-200/50 dark:border-emerald-700/50">Paid</span>
-                    <span className="text-[11px] font-medium text-emerald-700/70 dark:text-emerald-300/70 ml-2">Total earnings</span>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
 
-          <Card
-            className="group relative overflow-hidden border-none bg-amber-500/10 dark:bg-amber-600/20 backdrop-blur-xl border-t border-l border-white/40 dark:border-amber-500/30 hover:shadow-2xl hover:shadow-amber-500/20 transition-all duration-500 cursor-pointer"
-            onClick={() => setSelectedStat("outstanding")}
-          >
-            <div className="absolute inset-0 bg-linear-to-br from-amber-500/20 via-amber-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-              <CardTitle className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-[0.2em]">Outstanding</CardTitle>
-              <div className="p-2.5 bg-amber-500/20 dark:bg-amber-400/20 rounded-xl group-hover:scale-110 group-hover:bg-amber-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-amber-500/20">
-                <Clock className="h-5 w-5 text-amber-700 dark:text-amber-300 group-hover:text-white transition-colors" />
-              </div>
-            </CardHeader>
-            <CardContent className="relative z-10 pt-4">
-              {loading ? <Loader2 className="h-6 w-6 animate-spin text-amber-600" /> : (
-                <>
-                  <div className="text-4xl font-black tracking-tight text-amber-900 dark:text-white group-hover:translate-x-1 transition-transform duration-500">₹{stats.outstanding.toLocaleString()}</div>
-                  <div className="flex items-center mt-3">
-                    <span className="text-[10px] font-bold text-amber-700 dark:text-amber-100 bg-amber-500/10 dark:bg-amber-400/10 px-2 py-1 rounded-lg border border-amber-200/50 dark:border-amber-700/50 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                      Pending
-                    </span>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+              <CreateInvoiceDialog onCreated={fetchInvoices}>
+                <Button className="h-11 rounded-xl px-6 bg-[#e05d38] text-white hover:bg-[#c94f2f] hover:scale-105 transition-all shadow-lg shadow-[#e05d38]/20 font-bold uppercase tracking-wider text-xs">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Invoice
+                </Button>
+              </CreateInvoiceDialog>
+            </div>
+          </div>
 
-          <Card
-            className="group relative overflow-hidden border-none bg-blue-500/10 dark:bg-blue-600/20 backdrop-blur-xl border-t border-l border-white/40 dark:border-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-500 cursor-pointer"
-            onClick={() => setSelectedStat("invoices")}
-          >
-            <div className="absolute inset-0 bg-linear-to-br from-blue-500/20 via-blue-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-              <CardTitle className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-[0.2em]">Total Invoices</CardTitle>
-              <div className="p-2.5 bg-blue-500/20 dark:bg-blue-400/20 rounded-xl group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-blue-500/20">
-                <FileText className="h-5 w-5 text-blue-700 dark:text-blue-300 group-hover:text-white transition-colors" />
-              </div>
-            </CardHeader>
-            <CardContent className="relative z-10 pt-4">
-              {loading ? <Loader2 className="h-6 w-6 animate-spin text-blue-600" /> : (
-                <>
-                  <div className="text-4xl font-black tracking-tight text-blue-900 dark:text-white group-hover:translate-x-1 transition-transform duration-500">{stats.totalInvoices}</div>
-                  <p className="text-[11px] font-medium text-blue-700/70 dark:text-blue-300/70 mt-3">Generated this period</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+          {/* Stats Bar */}
+          <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-3">
+            <StatCard
+              label="Total Revenue"
+              value={`₹${stats.totalRevenue.toLocaleString()}`}
+              icon={IndianRupee}
+              subLabel="Paid invoices"
+              colorScheme="emerald"
+              loading={loading}
+            />
+            <StatCard
+              label="Pending Amount"
+              value={`₹${stats.pendingAmount.toLocaleString()}`}
+              icon={Clock}
+              subLabel={`${stats.pendingCount} unpaid invoices`}
+              colorScheme="amber"
+              loading={loading}
+            />
+            <StatCard
+              label="Total Invoices"
+              value={stats.totalCount}
+              icon={FileText}
+              subLabel="Across all time"
+              colorScheme="blue"
+              loading={loading}
+            />
+          </div>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-3 mb-10">
@@ -240,7 +265,7 @@ export default function BillingPage() {
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total</span>
-                      <span className="text-lg font-black text-slate-900 dark:text-white">₹{(stats.totalRevenue + stats.outstanding).toLocaleString()}</span>
+                      <span className="text-lg font-black text-slate-900 dark:text-white">₹{(stats.totalRevenue + stats.pendingAmount).toLocaleString()}</span>
                     </div>
                   </>
                 )}
@@ -260,82 +285,237 @@ export default function BillingPage() {
           </Card>
         </div>
 
-        {/* Billing Records Table */}
+        {/* Billing Records Table & Tabs */}
         <div className="glass-premium rounded-3xl p-4 md:p-8 hover:shadow-2xl transition-all animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-300">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-            <div>
-              <h3 className="text-xl font-black text-slate-900 dark:text-white">Recent Invoices</h3>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Chronological list of all billing activity</p>
+          <Tabs defaultValue="today" className="w-full" onValueChange={setActiveTab}>
+            <div className="flex flex-col gap-8 mb-10">
+              {/* Row 1: Title, Tabs, and Create Button */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+                  <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Billing Records</h3>
+                  <TabsList className="bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-1 h-11 rounded-xl w-fit">
+                    <TabsTrigger value="today" className="rounded-lg px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all text-xs">
+                      Todays Billing
+                    </TabsTrigger>
+                    <TabsTrigger value="all" className="rounded-lg px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all text-xs">
+                      All Billing
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <CreateInvoiceDialog onCreated={fetchInvoices}>
+                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-8 h-12 shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95 font-bold">
+                    <Plus className="h-5 w-5 mr-2" />
+                    Create Invoice
+                  </Button>
+                </CreateInvoiceDialog>
+              </div>
+
+              {/* Row 2: Filters */}
+              <div className="flex flex-wrap items-center gap-4 p-2 bg-slate-50/50 dark:bg-slate-900/20 rounded-2xl border border-slate-100 dark:border-slate-800/50">
+                <div className="px-4 py-2 flex items-center gap-2 border-r border-slate-200 dark:border-slate-700/50 mr-2">
+                  <Filter className="h-4 w-4 text-slate-400" />
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Data Filters</span>
+                </div>
+
+                {/* Service Filter */}
+                <div className="flex items-center gap-3 px-3 py-1.5 bg-white dark:bg-slate-800/50 rounded-xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm">
+                  <div className="flex items-center gap-2 pr-3 border-r border-slate-100 dark:border-slate-700">
+                    <Activity className="h-3.5 w-3.5 text-emerald-500" />
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Service</span>
+                  </div>
+                  <Select value={serviceFilter} onValueChange={setServiceFilter}>
+                    <SelectTrigger className="h-7 min-w-[130px] border-none bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-black p-0 focus:ring-0">
+                      <SelectValue placeholder="All Services" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                      <SelectItem value="all">All Services</SelectItem>
+                      {uniqueServices.map(service => (
+                        <SelectItem key={service} value={service}>{service}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Payment Method Filter */}
+                <div className="flex items-center gap-3 px-3 py-1.5 bg-white dark:bg-slate-800/50 rounded-xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm">
+                  <div className="flex items-center gap-2 pr-3 border-r border-slate-100 dark:border-slate-700">
+                    <IndianRupee className="h-3.5 w-3.5 text-blue-500" />
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Method</span>
+                  </div>
+                  <Select value={methodFilter} onValueChange={setMethodFilter}>
+                    <SelectTrigger className="h-7 min-w-[100px] border-none bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-black p-0 focus:ring-0">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                      <SelectItem value="all">All Methods</SelectItem>
+                      <SelectItem value="Cash">Cash</SelectItem>
+                      <SelectItem value="Online">Online</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* All Billing Specific Filters */}
+                {activeTab === "all" && (
+                  <>
+                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-2" />
+                    
+                    {/* Month Filter */}
+                    <div className="flex items-center gap-2">
+                       <Select value={monthFilter} onValueChange={setMonthFilter}>
+                        <SelectTrigger className="h-9 min-w-[110px] bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold shadow-sm">
+                          <div className="flex items-center gap-2">
+                            <CalendarIcon className="h-3 w-3 text-slate-400" />
+                            <SelectValue placeholder="Month" />
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                          <SelectItem value="all">Every Month</SelectItem>
+                          {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map(m => (
+                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {/* Year Filter */}
+                      <Select value={yearFilter} onValueChange={setYearFilter}>
+                        <SelectTrigger className="h-9 min-w-[90px] bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold shadow-sm">
+                          <SelectValue placeholder="Year" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                          <SelectItem value="all">All Years</SelectItem>
+                          {["2024", "2025", "2026"].map(y => (
+                            <SelectItem key={y} value={y}>{y}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {/* Date Picker Filter */}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className={cn(
+                            "h-9 px-4 text-xs font-bold rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 transition-all",
+                            dateFilter ? "border-primary text-primary bg-primary/5" : "text-slate-600 dark:text-slate-300"
+                          )}>
+                            <Clock className="h-3.5 w-3.5 mr-2 opacity-70" />
+                            {dateFilter ? format(dateFilter, "dd MMM yyyy") : "Pick Date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 rounded-2xl border-slate-200 dark:border-slate-800 shadow-2xl" align="end">
+                          <Calendar
+                            mode="single"
+                            selected={dateFilter}
+                            onSelect={setDateFilter}
+                            initialFocus
+                            className="rounded-2xl"
+                          />
+                          {dateFilter && (
+                            <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 rounded-b-2xl">
+                              <Button variant="ghost" size="sm" className="w-full text-xs font-bold text-slate-500 hover:text-red-500" onClick={() => setDateFilter(undefined)}>
+                                Clear Date
+                              </Button>
+                            </div>
+                          )}
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </>
+                )}
+
+                {/* Reset All (If any filter is active) */}
+                {(serviceFilter !== "all" || methodFilter !== "all" || monthFilter !== "all" || yearFilter !== "all" || dateFilter) && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="ml-auto text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 px-4 rounded-xl"
+                    onClick={() => {
+                      setServiceFilter("all")
+                      setMethodFilter("all")
+                      setMonthFilter("all")
+                      setYearFilter("all")
+                      setDateFilter(undefined)
+                    }}
+                  >
+                    Reset Filters
+                  </Button>
+                )}
+              </div>
             </div>
-            <CreateInvoiceDialog>
-              <Button className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-6 shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Invoice
-              </Button>
-            </CreateInvoiceDialog>
-          </div>
 
-
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto bg-white/30 dark:bg-slate-950/30">
-            <Table>
-              <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50">
-                <TableRow className="hover:bg-transparent border-slate-200 dark:border-slate-800">
-                  <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Invoice ID</TableHead>
-                  <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Patient Name</TableHead>
-                  <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Patient ID</TableHead>
-                  <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Service</TableHead>
-                  <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Amount</TableHead>
-                  <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Method</TableHead>
-                  <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Date</TableHead>
-                  <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-20">
-                      <Loader2 className="h-10 w-10 animate-spin mx-auto text-emerald-500 mb-4" />
-                      <span className="text-slate-500 dark:text-slate-400 font-medium tracking-tight">Syncing financial data...</span>
-                    </TableCell>
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto bg-white/30 dark:bg-slate-950/30">
+              <Table>
+                <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50">
+                  <TableRow className="hover:bg-transparent border-slate-200 dark:border-slate-800">
+                    <TableHead className="w-[60px] font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">S.no</TableHead>
+                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Invoice ID</TableHead>
+                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Patient Name</TableHead>
+                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Service</TableHead>
+                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Amount</TableHead>
+                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Method</TableHead>
+                    <TableHead className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Date</TableHead>
+                    <TableHead className="text-right font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">Status</TableHead>
                   </TableRow>
-                ) : invoices.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-20 text-slate-500 dark:text-slate-400 font-medium">
-                      No financial records found.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  invoices.map((record) => (
-                    <TableRow key={record._id} className="hover:bg-emerald-500/5 dark:hover:bg-emerald-400/5 border-slate-100 dark:border-slate-800 transition-colors">
-                      <TableCell className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">{record.invoiceId}</TableCell>
-                      <TableCell className="font-black text-slate-900 dark:text-white">{record.patientName}</TableCell>
-                      <TableCell className="font-mono text-xs text-slate-500">{record.patientId}</TableCell>
-                      <TableCell className="text-sm font-medium text-slate-700 dark:text-slate-300">{record.service}</TableCell>
-                      <TableCell className="font-black text-slate-900 dark:text-white">₹{record.amount.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="font-bold text-[10px] border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
-                          {record.paymentMethod || "Cash"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm font-medium text-slate-600 dark:text-slate-400">{new Date(record.date || record.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Badge
-                          className={
-                            record.status === "Paid"
-                              ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
-                              : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
-                          }
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${record.status === "Paid" ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
-                          {record.status}
-                        </Badge>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-20">
+                        <Loader2 className="h-10 w-10 animate-spin mx-auto text-emerald-500 mb-4" />
+                        <span className="text-slate-500 dark:text-slate-400 font-medium tracking-tight">Syncing financial records...</span>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ) : filteredInvoices.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-24 text-slate-500 dark:text-slate-400">
+                        <FileText className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                        <p className="text-lg font-black tracking-tight mb-1">No Records Found</p>
+                        <p className="text-sm font-medium opacity-60">Try adjusting your filters or tabs</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredInvoices.map((record, index) => (
+                      <TableRow key={record._id} className="group hover:bg-emerald-500/5 dark:hover:bg-emerald-400/5 border-slate-100 dark:border-slate-800 transition-all duration-300">
+                        <TableCell className="font-black text-slate-400 group-hover:text-emerald-600 transition-colors">{index + 1}</TableCell>
+                        <TableCell className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">{record.invoice_id}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-black text-slate-900 dark:text-white">{record.patient_name}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{record.patient_id}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm font-bold text-slate-700 dark:text-slate-300">{record.service}</TableCell>
+                        <TableCell className="font-black text-slate-900 dark:text-white text-base">₹{record.amount.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-bold text-[10px] border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm px-2.5 py-0.5">
+                            {record.payment_method || "Cash"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm font-bold text-slate-600 dark:text-slate-400">
+                          {format(record.date ? parseISO(record.date) : parseISO(record.created_at), "dd MMM yyyy")}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge
+                            className={cn(
+                              "font-black text-[10px] px-3 py-1 rounded-lg border",
+                              record.status === "Paid"
+                                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
+                                : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+                            )}
+                          >
+                            <span className={cn(
+                              "w-1.5 h-1.5 rounded-full mr-2",
+                              record.status === "Paid" ? "bg-emerald-500" : "bg-amber-500 animate-pulse"
+                            )} />
+                            {record.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </Tabs>
         </div>
       </div>
     </main>

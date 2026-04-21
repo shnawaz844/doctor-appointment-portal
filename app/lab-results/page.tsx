@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Download, FileText, Eye, X, Plus, Loader2, Search, Paperclip, ExternalLink, ImageIcon } from "lucide-react"
 import { CreateLabResultDialog } from "@/components/create-lab-result-dialog"
 import { Input } from "@/components/ui/input"
+import { StatCard } from "@/components/ui/stat-card"
 
 interface LabValue {
   name: string
@@ -98,67 +99,33 @@ export default function LabResultsPage() {
 
         {/* Lab Stats */}
         <div className="grid gap-4 md:gap-8 grid-cols-1 md:grid-cols-3 mb-8 md:mb-10">
-          <Card
-            className={`group relative overflow-hidden border-none backdrop-blur-xl border-t border-l border-white/40 dark:border-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-500 cursor-pointer ${filterStatus === "all" ? "bg-blue-500/20 dark:bg-blue-600/30 shadow-lg shadow-blue-500/10" : "bg-blue-500/10 dark:bg-blue-600/20"
-              }`}
+          <StatCard
+            label="Total Tests"
+            value={totalCount.toLocaleString()}
+            icon={FileText}
+            subLabel="All time"
+            colorScheme="blue"
+            loading={loading}
             onClick={() => setFilterStatus("all")}
-          >
-            <div className="absolute inset-0 bg-linear-to-br from-blue-500/20 via-blue-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-              <CardTitle className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-[0.2em]">Total Tests</CardTitle>
-              <div className="p-2.5 bg-blue-500/20 dark:bg-blue-400/20 rounded-xl group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-blue-500/20">
-                <FileText className="h-5 w-5 text-blue-700 dark:text-blue-300 group-hover:text-white transition-colors" />
-              </div>
-            </CardHeader>
-            <CardContent className="relative z-10 pt-4">
-              <div className="text-4xl font-black tracking-tight text-blue-900 dark:text-white group-hover:translate-x-1 transition-transform duration-500">
-                {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : totalCount.toLocaleString()}
-              </div>
-              <p className="text-xs font-medium text-blue-700/70 dark:text-blue-300/70 mt-3">All time</p>
-            </CardContent>
-          </Card>
-
-          <Card
-            className={`group relative overflow-hidden border-none backdrop-blur-xl border-t border-l border-white/40 dark:border-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-500 cursor-pointer ${filterStatus === "Complete" ? "bg-emerald-500/20 dark:bg-emerald-600/30 shadow-lg shadow-emerald-500/10" : "bg-emerald-500/10 dark:bg-emerald-600/20"
-              }`}
+          />
+          <StatCard
+            label="Completed"
+            value={completedCount.toLocaleString()}
+            icon={Plus}
+            subLabel="Results available"
+            colorScheme="emerald"
+            loading={loading}
             onClick={() => setFilterStatus("Complete")}
-          >
-            <div className="absolute inset-0 bg-linear-to-br from-emerald-500/20 via-emerald-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-              <CardTitle className="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-[0.2em]">Completed</CardTitle>
-              <div className="p-2.5 bg-emerald-500/20 dark:bg-emerald-400/20 rounded-xl group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-emerald-500/20">
-                <Badge className="h-5 w-5 bg-transparent border-none p-0">
-                  <Plus className="h-5 w-5 text-emerald-700 dark:text-emerald-300 group-hover:text-white transition-colors rotate-45" />
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="relative z-10 pt-4">
-              <div className="text-4xl font-black tracking-tight text-emerald-900 dark:text-white group-hover:translate-x-1 transition-transform duration-500">
-                {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : completedCount.toLocaleString()}
-              </div>
-              <p className="text-xs font-medium text-emerald-700/70 dark:text-emerald-300/70 mt-3">Results available</p>
-            </CardContent>
-          </Card>
-
-          <Card
-            className={`group relative overflow-hidden border-none backdrop-blur-xl border-t border-l border-white/40 dark:border-amber-500/30 hover:shadow-2xl hover:shadow-amber-500/20 transition-all duration-500 cursor-pointer ${filterStatus === "Pending" ? "bg-amber-500/20 dark:bg-amber-600/30 shadow-lg shadow-amber-500/10" : "bg-amber-500/10 dark:bg-amber-600/20"
-              }`}
+          />
+          <StatCard
+            label="Pending"
+            value={pendingCount.toLocaleString()}
+            icon={Loader2}
+            subLabel="Awaiting results"
+            colorScheme="amber"
+            loading={loading}
             onClick={() => setFilterStatus("Pending")}
-          >
-            <div className="absolute inset-0 bg-linear-to-br from-amber-500/20 via-amber-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-              <CardTitle className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-[0.2em]">Pending</CardTitle>
-              <div className="p-2.5 bg-amber-500/20 dark:bg-amber-400/20 rounded-xl group-hover:scale-110 group-hover:bg-amber-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-amber-500/20">
-                <Loader2 className="h-5 w-5 text-amber-700 dark:text-amber-300 group-hover:text-white transition-colors animate-pulse" />
-              </div>
-            </CardHeader>
-            <CardContent className="relative z-10 pt-4">
-              <div className="text-4xl font-black tracking-tight text-amber-900 dark:text-white group-hover:translate-x-1 transition-transform duration-500">
-                {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : pendingCount.toLocaleString()}
-              </div>
-              <p className="text-xs font-medium text-amber-700/70 dark:text-amber-300/70 mt-3">Awaiting results</p>
-            </CardContent>
-          </Card>
+          />
         </div>
 
         {/* Lab Results Table */}

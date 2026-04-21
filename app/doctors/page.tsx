@@ -16,7 +16,7 @@ export default function DoctorsPage() {
     const [specialties, setSpecialties] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
-    const [formData, setFormData] = useState({ name: "", specialty: "", phone: "", email: "", password: "", image: "" })
+    const [formData, setFormData] = useState({ name: "", specialty: "", phone: "", email: "", password: "", image: "", fee: "", emergency_fee: "" })
     const [imageFile, setImageFile] = useState<File | null>(null)
     const [imagePreview, setImagePreview] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
@@ -147,11 +147,13 @@ export default function DoctorsPage() {
                     phone: formData.phone,
                     email: formData.email,
                     password: formData.password,
-                    image: imageUrl
+                    image: imageUrl,
+                    fee: formData.fee,
+                    emergency_fee: formData.emergency_fee
                 }),
             })
             if (res.ok) {
-                setFormData({ name: "", specialty: "", phone: "", email: "", password: "", image: "" })
+                setFormData({ name: "", specialty: "", phone: "", email: "", password: "", image: "", fee: "", emergency_fee: "" })
                 setImageFile(null)
                 setImagePreview(null)
                 if (fileInputRef.current) fileInputRef.current.value = ""
@@ -234,7 +236,29 @@ export default function DoctorsPage() {
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-2">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="fee">Doctor's Appointment Fee</Label>
+                                        <Input
+                                            id="fee"
+                                            type="number"
+                                            value={formData.fee}
+                                            onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
+                                            placeholder="Consultation Fee"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="emergency_fee">Emergency Appointment Fee</Label>
+                                        <Input
+                                            id="emergency_fee"
+                                            type="number"
+                                            value={formData.emergency_fee}
+                                            onChange={(e) => setFormData({ ...formData, emergency_fee: e.target.value })}
+                                            placeholder="Emergency Fee"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2 mt-4">
                                     <Label>Doctor Profile Image</Label>
                                     <div className="flex flex-col items-center gap-4 p-4 border-2 border-dashed rounded-lg hover:bg-muted/50 transition-colors cursor-pointer relative"
                                         onClick={() => fileInputRef.current?.click()}>
@@ -360,6 +384,12 @@ export default function DoctorsPage() {
                                                             <p className="font-medium">{d.name}</p>
                                                             <p className="text-xs text-primary font-semibold">{getspecialtyName(d.specialty_id)}</p>
                                                             <p className="text-xs text-muted-foreground">{d.email || d.phone || "No contact info"}</p>
+                                                            {(d.fee || d.emergency_fee) && (
+                                                                <div className="flex gap-2 mt-1">
+                                                                    {d.fee > 0 && <span className="text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Fee: ₹{d.fee}</span>}
+                                                                    {d.emergency_fee > 0 && <span className="text-[10px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded">Emergency: ₹{d.emergency_fee}</span>}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     {doctorStatus === "active" && (

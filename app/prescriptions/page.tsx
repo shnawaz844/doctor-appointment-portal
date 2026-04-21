@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pill, Package, X, Eye, Loader2, ClipboardList, Search, FileImage, ExternalLink } from "lucide-react"
 import { CreatePrescriptionDialog } from "@/components/create-prescription-dialog"
 import { Input } from "@/components/ui/input"
+import { StatCard } from "@/components/ui/stat-card"
 
 interface Prescription {
   _id: string
@@ -91,67 +92,37 @@ export default function PrescriptionsPage() {
           <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Manage prescriptions and medications</p>
         </div>
 
+
+
         {/* Pharmacy Stats */}
         <div className="grid gap-4 md:gap-8 grid-cols-1 md:grid-cols-3 mb-8 md:mb-10">
-          <Card
-            className={`group relative overflow-hidden border-none backdrop-blur-xl border-t border-l border-white/40 dark:border-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-500 cursor-pointer ${filterStatus === "Active" ? "bg-blue-500/20 dark:bg-blue-600/30 shadow-lg shadow-blue-500/10" : "bg-blue-500/10 dark:bg-blue-600/20"
-              }`}
+          <StatCard
+            label="Active Prescriptions"
+            value={loading ? "..." : activeCount.toLocaleString()}
+            icon={Pill}
+            subLabel="Currently active"
+            colorScheme="blue"
+            loading={loading}
             onClick={() => setFilterStatus("Active")}
-          >
-            <div className="absolute inset-0 bg-linear-to-br from-blue-500/20 via-blue-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-              <CardTitle className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-[0.2em]">Active Prescriptions</CardTitle>
-              <div className="p-2.5 bg-blue-500/20 dark:bg-blue-400/20 rounded-xl group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-blue-500/20">
-                <Pill className="h-5 w-5 text-blue-700 dark:text-blue-300 group-hover:text-white transition-colors" />
-              </div>
-            </CardHeader>
-            <CardContent className="relative z-10 pt-4">
-              <div className="text-4xl font-black tracking-tight text-blue-900 dark:text-white group-hover:translate-x-1 transition-transform duration-500">
-                {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : activeCount.toLocaleString()}
-              </div>
-              <p className="text-xs font-medium text-blue-700/70 dark:text-blue-300/70 mt-3">Currently active</p>
-            </CardContent>
-          </Card>
-
-          <Card
-            className={`group relative overflow-hidden border-none backdrop-blur-xl border-t border-l border-white/40 dark:border-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-500 cursor-pointer ${filterStatus === "Filled" ? "bg-emerald-500/20 dark:bg-emerald-600/30 shadow-lg shadow-emerald-500/10" : "bg-emerald-500/10 dark:bg-emerald-600/20"
-              }`}
+          />
+          <StatCard
+            label="Filled"
+            value={loading ? "..." : filledCount.toLocaleString()}
+            icon={Package}
+            subLabel="This month"
+            colorScheme="emerald"
+            loading={loading}
             onClick={() => setFilterStatus("Filled")}
-          >
-            <div className="absolute inset-0 bg-linear-to-br from-emerald-500/20 via-emerald-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-              <CardTitle className="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-[0.2em]">Filled</CardTitle>
-              <div className="p-2.5 bg-emerald-500/20 dark:bg-emerald-400/20 rounded-xl group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-emerald-500/20">
-                <Package className="h-5 w-5 text-emerald-700 dark:text-emerald-300 group-hover:text-white transition-colors" />
-              </div>
-            </CardHeader>
-            <CardContent className="relative z-10 pt-4">
-              <div className="text-4xl font-black tracking-tight text-emerald-900 dark:text-white group-hover:translate-x-1 transition-transform duration-500">
-                {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : filledCount.toLocaleString()}
-              </div>
-              <p className="text-xs font-medium text-emerald-700/70 dark:text-emerald-300/70 mt-3">This month</p>
-            </CardContent>
-          </Card>
-
-          <Card
-            className={`group relative overflow-hidden border-none backdrop-blur-xl border-t border-l border-white/40 dark:border-slate-500/30 hover:shadow-2xl hover:shadow-slate-500/20 transition-all duration-500 cursor-pointer ${filterStatus === "all" ? "bg-slate-500/20 dark:bg-slate-600/30 shadow-lg shadow-slate-500/10" : "bg-slate-500/10 dark:bg-slate-600/20"
-              }`}
+          />
+          <StatCard
+            label="Total"
+            value={loading ? "..." : prescriptions.length.toLocaleString()}
+            icon={ClipboardList}
+            subLabel="All prescriptions"
+            colorScheme="indigo"
+            loading={loading}
             onClick={() => setFilterStatus("all")}
-          >
-            <div className="absolute inset-0 bg-linear-to-br from-slate-500/20 via-slate-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-              <CardTitle className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-[0.2em]">Total</CardTitle>
-              <div className="p-2.5 bg-slate-500/20 dark:bg-slate-400/20 rounded-xl group-hover:scale-110 group-hover:bg-slate-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-slate-500/20">
-                <div className="h-5 w-5 flex items-center justify-center font-black text-xs">Σ</div>
-              </div>
-            </CardHeader>
-            <CardContent className="relative z-10 pt-4">
-              <div className="text-4xl font-black tracking-tight text-slate-900 dark:text-white group-hover:translate-x-1 transition-transform duration-500">
-                {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : prescriptions.length.toLocaleString()}
-              </div>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-3">All prescriptions</p>
-            </CardContent>
-          </Card>
+          />
         </div>
 
         {/* Prescriptions Table */}
@@ -210,7 +181,7 @@ export default function PrescriptionsPage() {
                   </TableHeader>
                   <TableBody>
                     {paginatedPrescriptions.map((rx, index) => (
-                      <TableRow key={rx._id} className="group hover:bg-slate-500/5 transition-colors border-slate-200/50 dark:border-slate-800/50">
+                      <TableRow key={rx.id || rx._id || index} className="group hover:bg-slate-500/5 transition-colors border-slate-200/50 dark:border-slate-800/50">
                         <TableCell className="font-mono text-[11px] font-bold text-slate-400 py-4">
                           {((currentPage - 1) * itemsPerPage) + index + 1}
                         </TableCell>

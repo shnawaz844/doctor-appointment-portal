@@ -1,36 +1,28 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Poppins, Libre_Baskerville, IBM_Plex_Mono } from "next/font/google"
+import { Outfit, Plus_Jakarta_Sans } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
-import { AIChatbot } from "@/components/ai-chatbot"
 import "./globals.css"
 import { LayoutWrapper } from "@/components/layout-wrapper"
 
-const fontSans = Poppins({
+const fontSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700", "800"],
   variable: "--font-sans",
   preload: false,
 })
 
-const fontSerif = Libre_Baskerville({
+const fontSerif = Outfit({
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
   variable: "--font-serif",
   preload: false,
 })
 
-const fontMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-mono",
-  preload: false,
-})
-
 export const metadata: Metadata = {
-  title: "Healthcare Admin Dashboard",
-  description: "Patient Management System",
-  generator: "v0.app",
+  title: "Doctor Appointment Portal",
+  description: "Premium Healthcare Management System for Modern Clinics & Hospitals",
+  generator: "Aura Healthcare",
   icons: {
     icon: [
       {
@@ -63,9 +55,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="bg-background" suppressHydrationWarning>
-      <body className={`${fontSans.variable} ${fontSerif.variable} ${fontMono.variable} font-sans antialiased`}>
+      <body className={`${fontSans.variable} ${fontSerif.variable} font-sans antialiased`}>
         <LayoutWrapper>{children}</LayoutWrapper>
-        {/* <AIChatbot /> */}
         <Analytics />
       </body>
     </html>

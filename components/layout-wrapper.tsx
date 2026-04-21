@@ -28,8 +28,19 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
                 {!isChatPage && <AppSidebar />}
                 <SidebarInset>
                     {!isChatPage && (
-                        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 md:hidden">
-                            <SidebarTrigger className="-ml-1" />
+                        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border/50 px-4 md:hidden glass">
+                            <SidebarTrigger className="-ml-1 hover:bg-primary/10 hover:text-primary rounded-lg transition-colors" />
+                            <div
+                                className="text-sm font-black uppercase tracking-widest"
+                                style={{
+                                    background: "linear-gradient(135deg, oklch(0.55 0.22 285), oklch(0.62 0.18 200))",
+                                    WebkitBackgroundClip: "text",
+                                    WebkitTextFillColor: "transparent",
+                                    backgroundClip: "text",
+                                }}
+                            >
+                                Aura Health
+                            </div>
                         </header>
                     )}
                     {children}

@@ -2,20 +2,23 @@
 
 import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
+import { Search, User, FileText, Sparkles, X } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { FileText, User } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface PageHeaderProps {
   title: string
   description?: string
   showSearch?: boolean
+  badge?: string
+  actions?: React.ReactNode
 }
 
-export function PageHeader({ title, description, showSearch = false }: PageHeaderProps) {
+export function PageHeader({ title, description, showSearch = false, badge, actions }: PageHeaderProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [showResults, setShowResults] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -26,7 +29,6 @@ export function PageHeader({ title, description, showSearch = false }: PageHeade
             fetch("/api/patients"),
             fetch("/api/reports")
           ])
-
           const allPatients = await patientsRes.json()
           const allReports = await reportsRes.json()
 
@@ -71,62 +73,133 @@ export function PageHeader({ title, description, showSearch = false }: PageHeade
     setSearchTerm("")
   }
 
-  return (
-    <div className="mb-6 md:mb-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="relative">
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-1 md:mb-1.5 flex items-center gap-3">
-            {title}
-            <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse hidden sm:inline-block" />
-          </h1>
-          {description && <p className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400">{description}</p>}
-        </div>
-        {showSearch && (
-          <div className="relative w-full sm:max-w-md group/search">
+  const clearSearch = () => {
+    setSearchTerm("")
+    setShowResults(false)
+  }
 
-            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within/search:text-blue-500 transition-colors duration-300 z-10" />
-            <Input
-              type="search"
-              placeholder="Search patients, diagnoses, reports..."
-              className="pl-11 pr-4 py-6 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border-slate-200 dark:border-slate-800 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-md"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onBlur={() => setTimeout(() => setShowResults(false), 200)}
-              onFocus={() => searchTerm.length >= 2 && setShowResults(true)}
-            />
-            {showResults && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-background border border-border rounded-lg shadow-lg max-h-96 overflow-y-auto z-50">
-                {searchResults.map((result, index) => (
-                  <div
-                    key={index}
-                    className="p-3 hover:bg-accent cursor-pointer border-b border-border last:border-0"
-                    onClick={() => handleResultClick(result)}
+  return (
+    <div className="mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+        {/* Title Block */}
+        <div className="relative flex-1">
+          {badge && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mb-3">
+              <Sparkles className="h-3 w-3 text-primary" />
+              <span className="text-xs font-bold text-primary uppercase tracking-widest">{badge}</span>
+            </div>
+          )}
+          <h1 className="flex items-center gap-3 gradient-text">
+            {title}
+            {/* Animated dot */}
+            <span className="relative flex items-center justify-center shrink-0">
+              <span className="h-2.5 w-2.5 rounded-full bg-primary inline-block" />
+              <span className="absolute h-2.5 w-2.5 rounded-full bg-primary animate-pulse-ring opacity-60" />
+            </span>
+          </h1>
+          {description && (
+            <p className="text-sm font-medium text-muted-foreground mt-1.5">
+              {description}
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Search Bar */}
+          {showSearch && (
+            <div className="relative w-full sm:w-80 md:w-96">
+              <div className={cn(
+                "relative flex items-center rounded-2xl transition-all duration-300",
+                "bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl",
+                "border",
+                isFocused
+                  ? "border-primary/40 shadow-lg shadow-primary/10 ring-4 ring-primary/8"
+                  : "border-border/70 shadow-sm hover:shadow-md hover:border-primary/20"
+              )}>
+                <Search className={cn(
+                  "absolute left-3.5 h-4 w-4 transition-colors duration-300 pointer-events-none z-10",
+                  isFocused ? "text-primary" : "text-muted-foreground/60"
+                )} />
+                <Input
+                  type="search"
+                  placeholder="Search patients, diagnoses..."
+                  className="pl-10 pr-10 h-11 bg-transparent border-0 ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-sm font-medium placeholder:text-muted-foreground/50 rounded-2xl"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onBlur={() => {
+                    setTimeout(() => setShowResults(false), 200)
+                    setIsFocused(false)
+                  }}
+                  onFocus={() => {
+                    if (searchTerm.length >= 2) setShowResults(true)
+                    setIsFocused(true)
+                  }}
+                />
+                {searchTerm && (
+                  <button
+                    onClick={clearSearch}
+                    className="absolute right-3 p-1 hover:bg-muted/50 rounded-full transition-colors"
                   >
-                    {result.type === "patient" ? (
-                      <div className="flex items-center gap-3">
-                        <User className="h-4 w-4 text-primary" />
-                        <div>
-                          <p className="font-medium text-foreground">{result.data.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {result.data.id} • {result.data.diagnosis}
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-4 w-4 text-chart-3" />
-                        <div>
-                          <p className="font-medium text-foreground">{result.data.name}</p>
-                          <p className="text-xs text-muted-foreground">{result.data.type}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                    <X className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                )}
               </div>
-            )}
-          </div>
-        )}
+
+              {/* Search Results Dropdown */}
+              {showResults && searchResults.length > 0 && (
+                <div className={cn(
+                  "absolute top-full left-0 right-0 mt-2 z-50 overflow-hidden",
+                  "glass-premium rounded-2xl shadow-2xl shadow-black/15",
+                  "border border-white/30 dark:border-white/8",
+                  "animate-in fade-in slide-in-from-top-2 duration-200"
+                )}>
+                  <div className="px-3 py-2 border-b border-border/30">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      {searchResults.length} Results
+                    </p>
+                  </div>
+                  {searchResults.map((result, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-3 hover:bg-primary/5 cursor-pointer transition-colors border-b border-border/20 last:border-0"
+                      onClick={() => handleResultClick(result)}
+                    >
+                      <div className={cn(
+                        "p-2 rounded-xl shrink-0",
+                        result.type === "patient"
+                          ? "bg-indigo-500/10 text-indigo-500"
+                          : "bg-violet-500/10 text-violet-500"
+                      )}>
+                        {result.type === "patient"
+                          ? <User className="h-3.5 w-3.5" />
+                          : <FileText className="h-3.5 w-3.5" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm text-foreground truncate">{result.data.name}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {result.type === "patient"
+                            ? `${result.data.id} · ${result.data.diagnosis}`
+                            : result.data.type}
+                        </p>
+                      </div>
+                      <span className={cn(
+                        "ml-auto shrink-0 text-[9px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider",
+                        result.type === "patient"
+                          ? "bg-indigo-500/10 text-indigo-500"
+                          : "bg-violet-500/10 text-violet-500"
+                      )}>
+                        {result.type}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Additional action buttons slot */}
+          {actions && <div className="flex items-center gap-2">{actions}</div>}
+        </div>
       </div>
     </div>
   )
