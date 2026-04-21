@@ -157,3 +157,77 @@ export async function DELETE(req: Request) {
         return NextResponse.json({ error: error.message || "Failed to deactivate doctor" }, { status: 500 })
     }
 }
+
+export async function PUT(req: Request) {
+    try {
+        const session = await getAuthSession()
+        if (!session || !hasRole(session, ["ADMIN", "SUPER_ADMIN"])) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        }
+
+        const body = await req.json()
+        const { id, name, specialty_id, phone, email, image, fee, emergency_fee, password } = body
+
+        if (!id) return NextResponse.json({ error: "Doctor ID is required" }, { status: 400 })
+
+        // Get current doctor record to see if email is changing
+        const { data: currentDoc, error: fetchErr } = await supabase
+            .from("doctors")
+            .select("email, hospital_id")
+            .eq("id", id)
+            .single()
+
+        if (fetchErr) throw fetchErr
+
+        // Check permissions
+        if (session.role !== "SUPER_ADMIN" && currentDoc.hospital_id !== session.hospital_id) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+        }
+
+        // Update linked user if email changed or password provided
+        if (currentDoc.email && (email || password)) {
+            const updates: any = {}
+            if (name) updates.name = name
+            if (email) updates.email = email
+            if (password) {
+                updates.password = await bcrypt.hash(password, 10)
+            }
+
+            const { error: userErr } = await supabase
+                .from("users")
+                .update(updates)
+                .eq("email", currentDoc.email)
+
+            if (userErr) {
+                console.error("User update failed:", userErr)
+                // We might continue if it's just a user record, but safer to fail
+                throw userErr
+            }
+        }
+
+        const { data, error } = await supabase
+            .from("doctors")
+            .update({
+                name,
+                specialty_id,
+                phone,
+                email,
+                image,
+                fee: fee || 0,
+                emergency_fee: emergency_fee || 0
+            })
+            .eq("id", id)
+            .select()
+            .single()
+
+        if (error) {
+            console.error("Doctor record update failed:", error)
+            return NextResponse.json({ error: error.message }, { status: 400 })
+        }
+
+        return NextResponse.json(data)
+    } catch (error: any) {
+        console.error("Failed to update doctor:", error)
+        return NextResponse.json({ error: error.message || "Failed to update doctor" }, { status: 500 })
+    }
+}

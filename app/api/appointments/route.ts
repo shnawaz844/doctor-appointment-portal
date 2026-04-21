@@ -104,6 +104,11 @@ export async function PUT(request: Request) {
         if (body.phone) updateData.phone = formatPhoneWithPrefix(body.phone)
         if (body.uniqueCitizenCardNumber || body.unique_citizen_card_number) updateData.unique_citizen_card_number = body.uniqueCitizenCardNumber || body.unique_citizen_card_number
         if (body.notes !== undefined) updateData.notes = body.notes
+        
+        // Reschedule fields
+        if (body.reschedule_requested_date !== undefined) updateData.reschedule_requested_date = body.reschedule_requested_date
+        if (body.reschedule_requested_time !== undefined) updateData.reschedule_requested_time = body.reschedule_requested_time
+        if (body.reschedule_status !== undefined) updateData.reschedule_status = body.reschedule_status
 
         const { data, error } = await supabase
             .from("appointments")

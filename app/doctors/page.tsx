@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, UserPlus, ImagePlus, X, Eye, EyeOff, Trash2 } from "lucide-react"
+import { Loader2, UserPlus, ImagePlus, X, Eye, EyeOff, Trash2, Pencil } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { resolveImageUrl } from "@/lib/image-url"
 
@@ -22,6 +22,7 @@ export default function DoctorsPage() {
     const [error, setError] = useState<string | null>(null)
     const [showPassword, setShowPassword] = useState(false)
     const [doctorStatus, setDoctorStatus] = useState<"active" | "inactive">("active")
+    const [editingDoctor, setEditingDoctor] = useState<any | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const addDoctorCardRef = useRef<HTMLDivElement>(null)
     const [syncedCardHeight, setSyncedCardHeight] = useState<number | null>(null)
@@ -113,6 +114,31 @@ export default function DoctorsPage() {
         }
     }
 
+    const handleEditClick = (doctor: any) => {
+        setEditingDoctor(doctor)
+        setFormData({
+            name: doctor.name || "",
+            specialty: doctor.specialty_id || "",
+            phone: doctor.phone || "",
+            email: doctor.email || "",
+            password: "", // Don't pre-fill password for security
+            image: doctor.image || "",
+            fee: doctor.fee || "",
+            emergency_fee: doctor.emergency_fee || ""
+        })
+        setImagePreview(resolveImageUrl(doctor.image))
+        // Scroll to form
+        addDoctorCardRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+
+    const handleCancelEdit = () => {
+        setEditingDoctor(null)
+        setFormData({ name: "", specialty: "", phone: "", email: "", password: "", image: "", fee: "", emergency_fee: "" })
+        setImageFile(null)
+        setImagePreview(null)
+        if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!formData.name || !formData.specialty) return
@@ -138,29 +164,54 @@ export default function DoctorsPage() {
 
             const specId = formData.specialty
 
-            const res = await fetch("/api/doctors", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: formData.name,
-                    specialty_id: specId,
-                    phone: formData.phone,
-                    email: formData.email,
-                    password: formData.password,
-                    image: imageUrl,
-                    fee: formData.fee,
-                    emergency_fee: formData.emergency_fee
-                }),
-            })
-            if (res.ok) {
-                setFormData({ name: "", specialty: "", phone: "", email: "", password: "", image: "", fee: "", emergency_fee: "" })
-                setImageFile(null)
-                setImagePreview(null)
-                if (fileInputRef.current) fileInputRef.current.value = ""
-                fetchData()
+            if (editingDoctor) {
+                const res = await fetch("/api/doctors", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        id: editingDoctor.id,
+                        name: formData.name,
+                        specialty_id: specId,
+                        phone: formData.phone,
+                        email: formData.email,
+                        password: formData.password || undefined,
+                        image: imageUrl,
+                        fee: formData.fee,
+                        emergency_fee: formData.emergency_fee
+                    }),
+                })
+                if (res.ok) {
+                    handleCancelEdit()
+                    fetchData()
+                } else {
+                    const errData = await res.json()
+                    setError(errData.error || "Failed to update doctor")
+                }
             } else {
-                const errData = await res.json()
-                setError(errData.error || "Failed to add doctor")
+                const res = await fetch("/api/doctors", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        name: formData.name,
+                        specialty_id: specId,
+                        phone: formData.phone,
+                        email: formData.email,
+                        password: formData.password,
+                        image: imageUrl,
+                        fee: formData.fee,
+                        emergency_fee: formData.emergency_fee
+                    }),
+                })
+                if (res.ok) {
+                    setFormData({ name: "", specialty: "", phone: "", email: "", password: "", image: "", fee: "", emergency_fee: "" })
+                    setImageFile(null)
+                    setImagePreview(null)
+                    if (fileInputRef.current) fileInputRef.current.value = ""
+                    fetchData()
+                } else {
+                    const errData = await res.json()
+                    setError(errData.error || "Failed to add doctor")
+                }
             }
         } catch (error: any) {
             console.error(error)
@@ -182,7 +233,7 @@ export default function DoctorsPage() {
                 <div className="grid gap-6 md:grid-cols-2 md:items-start">
                     <Card ref={addDoctorCardRef}>
                         <CardHeader>
-                            <CardTitle>Add New Doctor</CardTitle>
+                            <CardTitle>{editingDoctor ? "Edit Doctor" : "Add New Doctor"}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={handleSubmit} className="space-y-4">
@@ -299,16 +350,16 @@ export default function DoctorsPage() {
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="password">Login Password *</Label>
+                                    <Label htmlFor="password">{editingDoctor ? "Update Password (optional)" : "Login Password *"}</Label>
                                     <div className="relative">
                                         <Input
                                             id="password"
                                             type={showPassword ? "text" : "password"}
                                             value={formData.password}
                                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                            placeholder="Set password for doctor login"
+                                            placeholder={editingDoctor ? "Leave blank to keep current password" : "Set password for doctor login"}
                                             className="pr-10"
-                                            required
+                                            required={!editingDoctor}
                                         />
                                         <button
                                             type="button"
@@ -325,11 +376,17 @@ export default function DoctorsPage() {
                                         {error}
                                     </div>
                                 )}
-                                <Button type="submit" disabled={submitting} className="w-full">
-                                    {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                                    Add Doctor
-                                </Button>
-
+                                <div className="flex gap-2">
+                                    <Button type="submit" disabled={submitting} className="flex-1">
+                                        {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                                        {editingDoctor ? "Update Doctor" : "Add Doctor"}
+                                    </Button>
+                                    {editingDoctor && (
+                                        <Button type="button" variant="outline" onClick={handleCancelEdit}>
+                                            Cancel
+                                        </Button>
+                                    )}
+                                </div>
                             </form>
                         </CardContent>
                     </Card>
@@ -392,17 +449,30 @@ export default function DoctorsPage() {
                                                             )}
                                                         </div>
                                                     </div>
-                                                    {doctorStatus === "active" && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleDeleteDoctor(d.id, d.name)}
-                                                            className="p-2 rounded-md text-destructive hover:bg-destructive/10 transition-colors"
-                                                            aria-label={`Delete ${d.name}`}
-                                                            title="Move to inactive"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
-                                                    )}
+                                                    <div className="flex gap-1">
+                                                        {doctorStatus === "active" && (
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleEditClick(d)}
+                                                                    className="p-2 rounded-md text-primary hover:bg-primary/10 transition-colors"
+                                                                    aria-label={`Edit ${d.name}`}
+                                                                    title="Edit Doctor"
+                                                                >
+                                                                    <Pencil className="h-4 w-4" />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteDoctor(d.id, d.name)}
+                                                                    className="p-2 rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+                                                                    aria-label={`Delete ${d.name}`}
+                                                                    title="Move to inactive"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             ))
                                         )}

@@ -84,6 +84,36 @@ export default function AppointmentsPage() {
     }
   }
 
+  const handleRescheduleAction = async (apt: any, action: 'approve' | 'reject') => {
+    try {
+      const updateData: any = {
+        id: apt.id || apt._id,
+      }
+
+      if (action === 'approve') {
+        updateData.date = apt.reschedule_requested_date
+        updateData.time = apt.reschedule_requested_time
+        updateData.reschedule_status = 'approved'
+      } else {
+        updateData.reschedule_status = 'rejected'
+        updateData.reschedule_requested_date = null
+        updateData.reschedule_requested_time = null
+      }
+
+      const res = await fetch("/api/appointments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      })
+
+      if (res.ok) {
+        fetchAppointments()
+      }
+    } catch (error) {
+      console.error(`Failed to ${action} reschedule:`, error)
+    }
+  }
+
   useEffect(() => {
     setCurrentPage(1)
   }, [filterDoctor, filterMonth, filterYear, filterDate, activeTab])
@@ -428,6 +458,39 @@ export default function AppointmentsPage() {
                             <Link href={`/patients/${apt.patient_id}`} className="hover:underline hover:text-blue-600 transition-colors duration-200">
                               {apt.patient_name}
                             </Link>
+
+                            {apt.reschedule_status === 'pending' && (
+                              <div className="mt-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2.5 animate-in fade-in slide-in-from-left-2 duration-500">
+                                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 tracking-widest">
+                                  <RotateCcw className="h-3 w-3" /> Reschedule Requested
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                  <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                                    <Calendar className="h-3.5 w-3.5 text-blue-500" /> {apt.reschedule_requested_date}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                                    <Clock className="h-3.5 w-3.5 text-amber-500" /> {apt.reschedule_requested_time}
+                                  </div>
+                                </div>
+                                <div className="flex gap-2 pt-1">
+                                  <Button 
+                                    size="sm" 
+                                    className="h-8 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+                                    onClick={() => handleRescheduleAction(apt, 'approve')}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="h-8 px-4 border-rose-200 dark:border-rose-900/50 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95"
+                                    onClick={() => handleRescheduleAction(apt, 'reject')}
+                                  >
+                                    Reject
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell className="font-mono text-[11px] text-slate-500 py-4">
                             {apt.id}
