@@ -6,6 +6,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "@/components/app-sidebar"
 import { Toaster } from "sonner"
 import { ThemeProvider } from "@/components/theme-provider"
+import { RealtimeAppointmentListener } from "@/components/realtime-appointment-listener"
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
@@ -16,6 +17,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
     if (isAuthPage) {
         return (
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+                <RealtimeAppointmentListener />
                 <div className="min-h-screen w-full">{children}</div>
                 <Toaster position="top-right" richColors />
             </ThemeProvider>
@@ -24,6 +26,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
     return (
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <RealtimeAppointmentListener />
             <SidebarProvider defaultOpen={true}>
                 {!isChatPage && <AppSidebar />}
                 <SidebarInset>

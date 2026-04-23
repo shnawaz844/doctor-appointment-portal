@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calendar, Clock, Loader2, RotateCcw, Video } from "lucide-react"
+import { Calendar, Clock, Loader2, RotateCcw, Video, AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -14,6 +14,9 @@ import { CreatePrescriptionDialog } from "@/components/create-prescription-dialo
 import { StatCard } from "@/components/ui/stat-card"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { formatPhoneWithPrefix } from "@/lib/phone"
+import { PageHeader } from "@/components/page-header"
+import { supabase } from "@/lib/supabase"
 
 
 export default function AppointmentsPage() {
@@ -37,10 +40,10 @@ export default function AppointmentsPage() {
   const fetchAppointments = async () => {
     try {
       const [apptsRes, meRes, docsRes, specsRes] = await Promise.all([
-        fetch("/api/appointments"),
-        fetch("/api/auth/me"),
-        fetch("/api/doctors"),
-        fetch("/api/specialties")
+        fetch(`/api/appointments?t=${Date.now()}`),
+        fetch(`/api/auth/me?t=${Date.now()}`),
+        fetch(`/api/doctors?t=${Date.now()}`),
+        fetch(`/api/specialties?t=${Date.now()}`)
       ])
       const apptsData = await apptsRes.json()
       const meData = await meRes.json()
@@ -61,6 +64,13 @@ export default function AppointmentsPage() {
   useEffect(() => {
     setMounted(true)
     fetchAppointments()
+    
+    // Read tab from URL
+    const tabParam = searchParams.get("tab")
+    if (tabParam) {
+      setActiveTab(tabParam)
+    }
+
     // Read patient param from OPD redirect
     const patientParam = searchParams.get("patient")
     if (patientParam) {
@@ -68,6 +78,45 @@ export default function AppointmentsPage() {
       setActiveTab("all")
     }
   }, [])
+
+  // Real-time synchronization for the appointments table
+  useEffect(() => {
+    if (!user || user.role !== "DOCTOR" || !user.doctor_id) return
+
+    const doctorId = String(user.doctor_id)
+    console.log(`[AppointmentsPage] Subscribing to real-time changes for doctor: ${doctorId}`)
+
+    const channel = supabase
+      .channel(`appointments-page-${doctorId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "appointments",
+          filter: `doctor_id=eq.${doctorId}`,
+        },
+        (payload) => {
+          console.log("[AppointmentsPage] Real-time change detected:", payload.eventType, payload.new?.id || payload.old?.id)
+          fetchAppointments()
+        }
+      )
+      .subscribe((status) => {
+        console.log(`[AppointmentsPage] Sync status for doctor ${doctorId}:`, status)
+      })
+
+    return () => {
+      console.log(`[AppointmentsPage] Cleaning up sync for doctor ${doctorId}`)
+      supabase.removeChannel(channel)
+    }
+  }, [user])
+
+  const changeTab = (newTab: string) => {
+    setActiveTab(newTab)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("tab", newTab)
+    router.push(`/appointments?${params.toString()}`, { scroll: false })
+  }
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
@@ -77,7 +126,8 @@ export default function AppointmentsPage() {
         body: JSON.stringify({ id: id, status: newStatus }),
       })
       if (res.ok) {
-        fetchAppointments()
+        await fetchAppointments()
+        router.refresh()
       }
     } catch (error) {
       console.error("Failed to update appointment status:", error)
@@ -107,10 +157,30 @@ export default function AppointmentsPage() {
       })
 
       if (res.ok) {
-        fetchAppointments()
+        await fetchAppointments()
+        router.refresh()
       }
     } catch (error) {
       console.error(`Failed to ${action} reschedule:`, error)
+    }
+  }
+
+  const handleEmergencyAction = async (apt: any, action: 'approve' | 'reject') => {
+    try {
+      const res = await fetch("/api/appointments/emergency", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: apt.id || apt._id, action }),
+      });
+
+      if (res.ok) {
+        await fetchAppointments();
+        router.refresh();
+      } else {
+        console.error("Emergency action failed", await res.json());
+      }
+    } catch (error) {
+      console.error(`Failed to execute emergency action:`, error);
     }
   }
 
@@ -125,6 +195,8 @@ export default function AppointmentsPage() {
     const now = new Date()
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const isOnline = (a.type !== "OPD" && a.type === "Online Consultation") ||
+      a.type === "Online OPD" ||
+      a.type === "Emergency" ||
       (a.type !== "OPD" && (
         a.notes?.includes("[Online Booking]") ||
         a.notes?.includes("[Booked From MOBILE APP]") ||
@@ -190,8 +262,11 @@ export default function AppointmentsPage() {
     completed: filteredAppointments.filter(a => a.status === "Completed").length
   }
 
-  const totalPages = Math.max(1, Math.ceil(filteredAppointments.length / itemsPerPage))
-  const paginatedAppointments = filteredAppointments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+  const emergencyAppts = filteredAppointments.filter(a => a.type === "Emergency")
+  const regularAppts = filteredAppointments.filter(a => a.type !== "Emergency")
+
+  const totalPages = Math.max(1, Math.ceil(regularAppts.length / itemsPerPage))
+  const paginatedAppointments = regularAppts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   if (!mounted) return null
 
@@ -205,10 +280,11 @@ export default function AppointmentsPage() {
       </div>
 
       <div className="container mx-auto relative py-6 md:py-10 px-4 md:px-8">
-        <div className="mb-10">
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Appointments</h1>
-          <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Schedule and manage patient appointments</p>
-        </div>
+        <PageHeader 
+          title="Appointments" 
+          description="Schedule and manage patient appointments"
+          badge="Aura Healthcare"
+        />
 
         {/* Patient filter banner — shown when redirected from OPD list */}
         {patientSearch && (
@@ -264,7 +340,7 @@ export default function AppointmentsPage() {
           <Button
             variant={activeTab === "today" ? "default" : "outline"}
             onClick={() => {
-              setActiveTab("today")
+              changeTab("today")
               setFilterDate("")
               setFilterMonth("all")
               setFilterYear("all")
@@ -278,7 +354,7 @@ export default function AppointmentsPage() {
           </Button>
           <Button
             variant={activeTab === "all" ? "default" : "outline"}
-            onClick={() => setActiveTab("all")}
+            onClick={() => changeTab("all")}
             className={cn(
               "rounded-2xl px-4 md:px-6 font-bold transition-all whitespace-nowrap",
               activeTab === "all" ? "shadow-lg shadow-blue-500/20" : "bg-white/50 dark:bg-slate-900/50"
@@ -289,7 +365,7 @@ export default function AppointmentsPage() {
           <Button
             variant={activeTab === "online" ? "default" : "outline"}
             onClick={() => {
-              setActiveTab("online")
+              changeTab("online")
               setFilterDate("")
               setFilterMonth("all")
               setFilterYear("all")
@@ -304,7 +380,7 @@ export default function AppointmentsPage() {
           <Button
             variant={activeTab === "allOnline" ? "default" : "outline"}
             onClick={() => {
-              setActiveTab("allOnline")
+              changeTab("allOnline")
               setFilterDate("")
               setFilterMonth("all")
               setFilterYear("all")
@@ -401,7 +477,7 @@ export default function AppointmentsPage() {
                       setFilterDoctor("all")
                       setFilterMonth("all")
                       setFilterYear("all")
-                      setActiveTab("today")
+                      changeTab("today")
                     }}
                     className="h-10 w-10 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                     title="Reset Filters"
@@ -427,180 +503,303 @@ export default function AppointmentsPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="rounded-2xl border border-slate-200/50 dark:border-slate-800/50 overflow-x-auto bg-white/30 dark:bg-slate-950/30">
-                <Table>
-                  <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50">
-                    <TableRow className="hover:bg-transparent border-slate-200/50 dark:border-slate-800/50">
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12 w-10">S.no</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Patient Name</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">APPOINTMENT ID</TableHead>
-                      {activeTab !== "today" && activeTab !== "online" && (
-                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Date</TableHead>
-                      )}
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Time</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Doctor</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Specialty</TableHead>
-                      {activeTab !== "online" && activeTab !== "allOnline" && (
-                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Visit Type</TableHead>
-                      )}
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Status</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12 text-center">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedAppointments.length > 0 ? (
-                      paginatedAppointments.map((apt, index) => (
-                        <TableRow key={apt.id || apt._id} className="group hover:bg-slate-500/5 transition-colors border-slate-200/50 dark:border-slate-800/50">
-                          <TableCell className="font-mono text-[11px] text-slate-500 py-4">
-                            {(currentPage - 1) * itemsPerPage + index + 1}
-                          </TableCell>
-                          <TableCell className="font-bold text-slate-900 dark:text-white py-4">
-                            <Link href={`/patients/${apt.patient_id}`} className="hover:underline hover:text-blue-600 transition-colors duration-200">
-                              {apt.patient_name}
-                            </Link>
+              <div className="space-y-8">
+                {/* Emergency Appointments Section */}
+                {emergencyAppts.length > 0 && (
+                  <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-700">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-1 bg-red-500 rounded-full" />
+                      <h4 className="text-lg font-black tracking-tight text-red-600 dark:text-red-400 uppercase">Emergency Appointments</h4>
+                      <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-200 font-black px-3 py-0.5 rounded-full text-[10px]">CRITICAL</Badge>
+                    </div>
 
-                            {apt.reschedule_status === 'pending' && (
-                              <div className="mt-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2.5 animate-in fade-in slide-in-from-left-2 duration-500">
-                                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 tracking-widest">
-                                  <RotateCcw className="h-3 w-3" /> Reschedule Requested
+                    <div className="rounded-2xl border-2 border-red-100 dark:border-red-900/30 overflow-x-auto bg-red-50/30 dark:bg-red-950/10 shadow-xl shadow-red-500/5">
+                      <Table>
+                        <TableHeader className="bg-red-500/5 dark:bg-red-950/30">
+                          <TableRow className="hover:bg-transparent border-red-100 dark:border-red-900/30">
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-red-600/70 h-12 w-10">S.no</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-red-600/70 h-12">Patient Name</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-red-600/70 h-12">Contact</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-red-600/70 h-12">Time</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-red-600/70 h-12">Doctor</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-red-600/70 h-12">Status</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-red-600/70 h-12 text-center">Action</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {emergencyAppts.map((apt, index) => (
+                            <TableRow key={apt.id || apt._id} className="group hover:bg-red-500/5 transition-colors border-red-100 dark:border-red-900/30 bg-white/40 dark:bg-slate-900/40">
+                              <TableCell className="font-mono text-[11px] text-red-600/50 py-4 font-black">
+                                {index + 1}
+                              </TableCell>
+                              <TableCell className="font-bold text-slate-900 dark:text-white py-4">
+                                <Link href={`/patients/${apt.patient_id}`} className="hover:underline hover:text-red-600 transition-colors duration-200 flex items-center gap-2">
+                                  {apt.patient_name}
+                                  <AlertTriangle className="h-3 w-3 text-red-500 animate-pulse" />
+                                </Link>
+                              </TableCell>
+                              <TableCell className="font-mono text-[11px] text-slate-500 py-4">
+                                {formatPhoneWithPrefix(apt.phone)}
+                              </TableCell>
+                              <TableCell className="py-4">
+                                <div className="flex items-center gap-2 text-sm font-black text-red-600 dark:text-red-400 bg-red-500/5 rounded-lg px-2 py-1 w-fit">
+                                  <Clock className="h-3.5 w-3.5" />
+                                  {apt.time || "ASAP"}
                                 </div>
-                                <div className="flex flex-col gap-1.5">
-                                  <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300">
-                                    <Calendar className="h-3.5 w-3.5 text-blue-500" /> {apt.reschedule_requested_date}
+                              </TableCell>
+                              <TableCell className="font-bold text-sm text-slate-700 dark:text-slate-200 py-4">{apt.doctor}</TableCell>
+                              <TableCell className="py-4">
+                                <Badge className={cn(
+                                  "h-7 text-[10px] font-black uppercase tracking-wider rounded-lg border-none px-3",
+                                  apt.status === "Awaiting Payment" ? "bg-amber-500/10 text-amber-700" : "bg-red-500/10 text-red-700"
+                                )}>
+                                  {apt.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="py-4">
+                                {apt.status === 'Pending' ? (
+                                  <div className="p-3 rounded-2xl bg-gradient-to-br from-red-500/10 to-rose-500/20 border border-red-500/20 space-y-3 animate-in zoom-in-95 duration-500 shadow-lg shadow-red-500/5">
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        className="h-8 flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-95 px-3"
+                                        onClick={() => handleEmergencyAction(apt, 'approve')}
+                                      >
+                                        Approve
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 flex-1 border-rose-200 dark:border-rose-900/50 bg-white/50 dark:bg-transparent text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all hover:scale-[1.02] active:scale-95 px-3"
+                                        onClick={() => handleEmergencyAction(apt, 'reject')}
+                                      >
+                                        Reject
+                                      </Button>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300">
-                                    <Clock className="h-3.5 w-3.5 text-amber-500" /> {apt.reschedule_requested_time}
-                                  </div>
-                                </div>
-                                <div className="flex gap-2 pt-1">
-                                  <Button 
-                                    size="sm" 
-                                    className="h-8 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
-                                    onClick={() => handleRescheduleAction(apt, 'approve')}
-                                  >
-                                    Approve
-                                  </Button>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    className="h-8 px-4 border-rose-200 dark:border-rose-900/50 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95"
-                                    onClick={() => handleRescheduleAction(apt, 'reject')}
-                                  >
-                                    Reject
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell className="font-mono text-[11px] text-slate-500 py-4">
-                            {apt.id}
-                          </TableCell>
-                          {activeTab !== "today" && activeTab !== "online" && (
-                            <TableCell className="py-4">
-                              <div className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
-                                <Calendar className="h-3.5 w-3.5 text-blue-500" />
-                                {apt.date}
-                              </div>
-                            </TableCell>
-                          )}
-                          <TableCell className="py-4">
-                            <div className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
-                              <Clock className="h-3.5 w-3.5 text-amber-500" />
-                              {apt.time}
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-bold text-sm text-slate-700 dark:text-slate-200 py-4">{apt.doctor}</TableCell>
-                          <TableCell className="py-4">
-                            {apt.specialty ? (
-                              <Badge variant="secondary" className="bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-200/50 dark:border-purple-800/50 text-[10px] font-bold rounded-lg px-2">
-                                {(() => {
-                                  const doctor = doctors.find(d => d.name === apt.doctor)
-                                  const specialty = specialties.find(s => s.id === doctor?.specialty_id)
-                                  return specialty?.name || apt.specialty || "General"
-                                })()}
-                              </Badge>
-                            ) : (
-                              <span className="text-slate-400 text-[10px] font-black uppercase tracking-tighter">N/A</span>
-                            )}
-                          </TableCell>
-                          {activeTab !== "online" && activeTab !== "allOnline" && (
-                            <TableCell className="py-4">
-                              <Badge variant="outline" className="text-[10px] font-bold border-slate-200 dark:border-slate-800 rounded-lg px-2">{apt.type}</Badge>
-                            </TableCell>
-                          )}
-                          <TableCell className="py-4">
-                            <Select
-                              defaultValue={apt.status}
-                              onValueChange={(val) => handleStatusChange(apt.id || apt._id, val)}
-                            >
-                              <SelectTrigger className={`h-8 w-[120px] text-[10px] font-black uppercase tracking-wider rounded-lg border-none ${apt.status === "Completed" ? "bg-emerald-500/10 text-emerald-700" :
-                                apt.status === "Cancelled" ? "bg-rose-500/10 text-rose-700" :
-                                  "bg-blue-500/10 text-blue-700"
-                                }`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Scheduled">Scheduled</SelectItem>
-                                <SelectItem value="Confirmed">Confirmed</SelectItem>
-                                <SelectItem value="Completed">Completed</SelectItem>
-                                <SelectItem value="Cancelled">Cancelled</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell className="text-right py-4">
-                            <div className="flex items-center justify-end gap-1.5">
-                              {user && user.role !== "STAFF" && (
-                                <CreatePrescriptionDialog preselectedPatientId={apt.patient_id} appointmentId={apt.id || apt._id}>
-                                  <Button variant="outline" size="sm" className="h-7 px-2.5 rounded-lg border-blue-200 dark:border-blue-800 text-blue-600 hover:bg-blue-600 hover:text-white transition-all font-bold text-[10px] uppercase tracking-widest" title="Prescribe">
-                                    Rx
-                                  </Button>
-                                </CreatePrescriptionDialog>
-                              )}
-                              {(apt.type === "Online Consultation" || apt.notes?.includes("[Online Booking]") || (apt.notes?.includes("[Booked From MOBILE APP]") && apt.type !== "OPD") || apt.notes?.includes("Online")) && (
-                                (() => {
-                                  const enabled = apt.type === "Online Consultation" || isVideoEnabled(apt.date, apt.time) || apt.notes?.includes("Online");
-                                  return (
+                                ) : (
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    {user && user.role !== "STAFF" && (
+                                      <CreatePrescriptionDialog preselectedPatientId={apt.patient_id} appointmentId={apt.id || apt._id}>
+                                        <Button variant="outline" size="sm" className="h-7 px-2.5 rounded-lg border-blue-200 dark:border-blue-800 text-blue-600 hover:bg-blue-600 hover:text-white transition-all font-bold text-[10px] uppercase tracking-widest" title="Prescribe">
+                                          Rx
+                                        </Button>
+                                      </CreatePrescriptionDialog>
+                                    )}
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className={cn(
-                                        "h-7 px-2.5 rounded-lg border-indigo-200 dark:border-indigo-800 text-indigo-600 font-bold text-[10px] uppercase tracking-widest transition-all",
-                                        enabled ? "hover:bg-indigo-600 hover:text-white" : "opacity-50 cursor-not-allowed bg-slate-100"
-                                      )}
-                                      onClick={() => enabled && window.open(`https://meet.jit.si/appointment-portal-${apt._id || apt.id}`, '_blank')}
-                                      title={enabled ? "Join Video Call" : "Video will enable before 5 min"}
-                                      disabled={!enabled}
+                                      className="h-7 px-2.5 rounded-lg border-indigo-200 dark:border-indigo-800 text-indigo-600 font-bold text-[10px] uppercase tracking-widest transition-all hover:bg-indigo-600 hover:text-white"
+                                      onClick={() => window.open(`https://meet.jit.si/appointment-portal-${apt._id || apt.id}`, '_blank')}
+                                      title="Join Video Call"
                                     >
                                       <Video className="h-3 w-3 mr-1" />
                                       Join
                                     </Button>
-                                  )
-                                })()
-                              )}
-                              <EditAppointmentDialog appointment={apt} onSuccess={fetchAppointments}>
-                                <Button variant="ghost" size="sm" className="h-7 px-2 rounded-lg hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all font-bold text-[10px] uppercase tracking-widest" title="Edit Appointment">
-                                  Edit
-                                </Button>
-                              </EditAppointmentDialog>
-                            </div>
-                          </TableCell>
+                                    <EditAppointmentDialog appointment={apt} onSuccess={fetchAppointments}>
+                                      <Button variant="ghost" size="sm" className="h-8 px-3 rounded-xl hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all font-bold text-[10px] uppercase tracking-widest border border-slate-200 dark:border-slate-800" title="Edit Appointment">
+                                        Manage
+                                      </Button>
+                                    </EditAppointmentDialog>
+                                  </div>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Regular Appointments Section */}
+                <div className="space-y-4">
+                  {emergencyAppts.length > 0 && <div className="h-px bg-slate-200 dark:bg-slate-800" />}
+                  <div className="rounded-2xl border border-slate-200/50 dark:border-slate-800/50 overflow-x-auto bg-white/30 dark:bg-slate-950/30">
+                    <Table>
+                      <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50">
+                        <TableRow className="hover:bg-transparent border-slate-200/50 dark:border-slate-800/50">
+                          <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12 w-10">S.no</TableHead>
+                          <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Patient Name</TableHead>
+                          <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">APPOINTMENT ID</TableHead>
+                          {activeTab !== "today" && activeTab !== "online" && (
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Date</TableHead>
+                          )}
+                          <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Time</TableHead>
+                          <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Doctor</TableHead>
+                          <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Specialty</TableHead>
+                          {activeTab !== "online" && activeTab !== "allOnline" && (
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Visit Type</TableHead>
+                          )}
+                          <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Status</TableHead>
+                          <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12 text-center">Action</TableHead>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={10} className="text-center text-slate-500 py-12 font-medium">
-                          No upcoming appointments found
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedAppointments.length > 0 ? (
+                          paginatedAppointments.map((apt, index) => (
+                            <TableRow key={apt.id || apt._id} className="group hover:bg-slate-500/5 transition-colors border-slate-200/50 dark:border-slate-800/50">
+                              <TableCell className="font-mono text-[11px] text-slate-500 py-4">
+                                {(currentPage - 1) * itemsPerPage + index + 1}
+                              </TableCell>
+                              <TableCell className="font-bold text-slate-900 dark:text-white py-4">
+                                <Link href={`/patients/${apt.patient_id}`} className="hover:underline hover:text-blue-600 transition-colors duration-200">
+                                  {apt.patient_name}
+                                </Link>
+
+                                {apt.reschedule_status === 'pending' && (
+                                  <div className="mt-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2.5 animate-in fade-in slide-in-from-left-2 duration-500">
+                                    <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 tracking-widest">
+                                      <RotateCcw className="h-3 w-3" /> Reschedule Requested
+                                    </div>
+                                    <div className="flex flex-col gap-1.5">
+                                      <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                                        <Calendar className="h-3.5 w-3.5 text-blue-500" /> {apt.reschedule_requested_date}
+                                      </div>
+                                      <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                                        <Clock className="h-3.5 w-3.5 text-amber-500" /> {apt.reschedule_requested_time}
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-2 pt-1">
+                                      <Button
+                                        size="sm"
+                                        className="h-8 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+                                        onClick={() => handleRescheduleAction(apt, 'approve')}
+                                      >
+                                        Approve
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 px-4 border-rose-200 dark:border-rose-900/50 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95"
+                                        onClick={() => handleRescheduleAction(apt, 'reject')}
+                                      >
+                                        Reject
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {apt.reschedule_status === 'approved' && (
+                                  <Badge variant="outline" className="mt-2 bg-emerald-500/10 text-emerald-600 border-emerald-200 text-[9px] font-black tracking-widest uppercase">
+                                    Time Updated
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="font-mono text-[11px] text-slate-500 py-4">
+                                {apt.id}
+                              </TableCell>
+                              {activeTab !== "today" && activeTab !== "online" && (
+                                <TableCell className="py-4">
+                                  <div className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+                                    <Calendar className="h-3.5 w-3.5 text-blue-500" />
+                                    {apt.date}
+                                  </div>
+                                </TableCell>
+                              )}
+                              <TableCell className="py-4">
+                                <div className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+                                  <Clock className="h-3.5 w-3.5 text-amber-500" />
+                                  {apt.time}
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-bold text-sm text-slate-700 dark:text-slate-200 py-4">{apt.doctor}</TableCell>
+                              <TableCell className="py-4">
+                                {apt.specialty ? (
+                                  <Badge variant="secondary" className="bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-200/50 dark:border-purple-800/50 text-[10px] font-bold rounded-lg px-2">
+                                    {(() => {
+                                      const doctor = doctors.find(d => d.name === apt.doctor)
+                                      const specialty = specialties.find(s => s.id === doctor?.specialty_id)
+                                      return specialty?.name || apt.specialty || "General"
+                                    })()}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-slate-400 text-[10px] font-black uppercase tracking-tighter">N/A</span>
+                                )}
+                              </TableCell>
+                              {activeTab !== "online" && activeTab !== "allOnline" && (
+                                <TableCell className="py-4">
+                                  <Badge variant="outline" className="text-[10px] font-bold border-slate-200 dark:border-slate-800 rounded-lg px-2">{apt.type}</Badge>
+                                </TableCell>
+                              )}
+                              <TableCell className="py-4">
+                                <Select
+                                  value={apt.status}
+                                  onValueChange={(val) => handleStatusChange(apt.id || apt._id, val)}
+                                >
+                                  <SelectTrigger className={`h-8 w-[120px] text-[10px] font-black uppercase tracking-wider rounded-lg border-none ${apt.status === "Completed" ? "bg-emerald-500/10 text-emerald-700" :
+                                    apt.status === "Cancelled" ? "bg-rose-500/10 text-rose-700" :
+                                      apt.status === "Awaiting Payment" ? "bg-amber-500/10 text-amber-700" :
+                                        "bg-blue-500/10 text-blue-700"
+                                    }`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Scheduled">Scheduled</SelectItem>
+                                    <SelectItem value="Awaiting Payment">Awaiting Payment</SelectItem>
+                                    <SelectItem value="Confirmed">Confirmed</SelectItem>
+                                    <SelectItem value="Pending">Pending</SelectItem>
+                                    <SelectItem value="Completed">Completed</SelectItem>
+                                    <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell className="text-right py-4">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {user && user.role !== "STAFF" && (
+                                    <CreatePrescriptionDialog preselectedPatientId={apt.patient_id} appointmentId={apt.id || apt._id}>
+                                      <Button variant="outline" size="sm" className="h-7 px-2.5 rounded-lg border-blue-200 dark:border-blue-800 text-blue-600 hover:bg-blue-600 hover:text-white transition-all font-bold text-[10px] uppercase tracking-widest" title="Prescribe">
+                                        Rx
+                                      </Button>
+                                    </CreatePrescriptionDialog>
+                                  )}
+                                  {(apt.type === "Online Consultation" || apt.type === "Emergency" || apt.type === "Online OPD" || apt.notes?.includes("[Online Booking]") || (apt.notes?.includes("[Booked From MOBILE APP]") && apt.type !== "OPD") || apt.notes?.includes("Online")) && (
+                                    (() => {
+                                      const enabled = apt.type === "Online Consultation" || apt.type === "Emergency" || apt.type === "Online OPD" || isVideoEnabled(apt.date, apt.time) || apt.notes?.includes("Online");
+                                      return (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className={cn(
+                                            "h-7 px-2.5 rounded-lg border-indigo-200 dark:border-indigo-800 text-indigo-600 font-bold text-[10px] uppercase tracking-widest transition-all",
+                                            enabled ? "hover:bg-indigo-600 hover:text-white" : "opacity-50 cursor-not-allowed bg-slate-100"
+                                          )}
+                                          onClick={() => enabled && window.open(`https://meet.jit.si/appointment-portal-${apt._id || apt.id}`, '_blank')}
+                                          title={enabled ? "Join Video Call" : "Video will enable before 5 min"}
+                                          disabled={!enabled}
+                                        >
+                                          <Video className="h-3 w-3 mr-1" />
+                                          Join
+                                        </Button>
+                                      )
+                                    })()
+                                  )}
+                                  <EditAppointmentDialog appointment={apt} onSuccess={fetchAppointments}>
+                                    <Button variant="ghost" size="sm" className="h-7 px-2 rounded-lg hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all font-bold text-[10px] uppercase tracking-widest" title="Edit Appointment">
+                                      Edit
+                                    </Button>
+                                  </EditAppointmentDialog>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={10} className="text-center text-slate-500 py-12 font-medium">
+                              No upcoming appointments found
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
               </div>
             )}
             {!loading && totalPages > 1 && (
               <div className="flex items-center justify-between mt-6">
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Showing <span className="font-bold">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-bold">{Math.min(currentPage * itemsPerPage, filteredAppointments.length)}</span> of <span className="font-bold">{filteredAppointments.length}</span> appointments
+                  Showing <span className="font-bold">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-bold">{Math.min(currentPage * itemsPerPage, regularAppts.length)}</span> of <span className="font-bold">{regularAppts.length}</span> appointments
                 </p>
                 <div className="flex items-center gap-2">
                   <Button

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Loader2 } from "lucide-react"
+import { formatPhoneWithPrefix } from "@/lib/phone"
 
 export function EditAppointmentDialog({
     children,
@@ -31,6 +32,7 @@ export function EditAppointmentDialog({
         specialty: appointment.specialty || "",
         visitType: appointment.type,
         status: appointment.status,
+        phone: formatPhoneWithPrefix(appointment.phone),
         notes: appointment.notes || "",
     })
 
@@ -67,6 +69,7 @@ export function EditAppointmentDialog({
                 specialty: appointment.specialty || "",
                 visitType: appointment.type,
                 status: appointment.status,
+                phone: formatPhoneWithPrefix(appointment.phone),
                 notes: appointment.notes || "",
             })
         }
@@ -138,29 +141,55 @@ export function EditAppointmentDialog({
             <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-2xl rounded-3xl p-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 <DialogHeader className="px-8 pt-8 pb-4 border-b border-slate-100 dark:border-slate-800">
-                    <DialogTitle className="text-2xl font-black text-slate-900 dark:text-white">Edit Appointment <span className="text-sm font-bold text-slate-400 ml-2 uppercase tracking-widest">{appointment.id}</span></DialogTitle>
+                    <DialogTitle className="text-2xl font-black text-slate-900 dark:text-white">
+                        Edit Appointment 
+                        <span className="text-sm font-bold text-slate-400 ml-2 uppercase tracking-widest">
+                            {appointment.type === "Emergency" ? formatPhoneWithPrefix(appointment.phone) : appointment.id}
+                        </span>
+                    </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 p-8">
                     <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-4">
                         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Patient Details</h4>
-                        <div className="space-y-2">
-                            <Label htmlFor="patient_id" className="text-xs font-bold text-slate-700 dark:text-slate-300">Patient ID *</Label>
-                            <Select value={formData.patient_id} onValueChange={(v) => setFormData({ ...formData, patient_id: v })}>
-                                <SelectTrigger id="patient_id" className="w-full h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
-                                    <SelectValue placeholder="Select patient" />
-                                </SelectTrigger>
-                                <SelectContent className="rounded-xl">
-                                    {patients.length > 0 ? (
-                                        patients.map(p => (
-                                            <SelectItem key={p.id} value={p.id}>
-                                                {p.id} - {p.name}
-                                            </SelectItem>
-                                        ))
-                                    ) : (
-                                        <SelectItem value={appointment.patient_id}>{appointment.patient_id} - {appointment.patientName}</SelectItem>
-                                    )}
-                                </SelectContent>
-                            </Select>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="patient_id" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                    {appointment.type === "Emergency" ? "Patient Name *" : "Patient ID *"}
+                                </Label>
+                                {appointment.type === "Emergency" ? (
+                                    <Input 
+                                        value={appointment.patient_name || appointment.patientName} 
+                                        readOnly 
+                                        className="h-11 rounded-xl bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 font-bold" 
+                                    />
+                                ) : (
+                                    <Select value={formData.patient_id} onValueChange={(v) => setFormData({ ...formData, patient_id: v })}>
+                                        <SelectTrigger id="patient_id" className="w-full h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+                                            <SelectValue placeholder="Select patient" />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl">
+                                            {patients.length > 0 ? (
+                                                patients.map(p => (
+                                                    <SelectItem key={p.id} value={p.id}>
+                                                        {p.id} - {p.name}
+                                                    </SelectItem>
+                                                ))
+                                            ) : (
+                                                <SelectItem value={appointment.patient_id}>{appointment.patient_id} - {appointment.patientName}</SelectItem>
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="phone" className="text-xs font-bold text-slate-700 dark:text-slate-300">Contact / Phone *</Label>
+                                <Input 
+                                    id="phone" 
+                                    value={formData.phone} 
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
+                                    className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 transition-all focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" 
+                                />
+                            </div>
                         </div>
                     </div>
 

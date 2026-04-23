@@ -16,19 +16,22 @@ export function formatPhoneWithPrefix(phone: string | null | undefined): string 
     // Remove all non-digit characters
     const digits = phone.replace(/\D/g, "");
     
-    // 10 digits -> +91XXXXXXXXXX
+    // 10 digits -> +91 XXXXXXXXXX
     if (digits.length === 10) {
-        return `+91${digits}`;
+        return `+91 ${digits}`;
     }
     
-    // 12 digits and starts with 91 -> +91XXXXXXXXXX
+    // 12 digits and starts with 91 -> +91 XXXXXXXXXX
     if (digits.length === 12 && digits.startsWith("91")) {
-        return `+${digits}`;
+        return `+91 ${digits.substring(2)}`;
     }
     
     // If it already starts with +, and has digits, just keep it but maybe clean it?
     // For now, if it doesn't match the 10/12 digit pattern, return the cleaned version if it looks like a phone number
     if (digits.length > 10) {
+        if (digits.startsWith("91")) {
+            return `+91 ${digits.substring(2)}`;
+        }
         return `+${digits}`;
     }
 

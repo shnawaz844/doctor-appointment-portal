@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Search, User, FileText, Sparkles, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { NotificationTray } from "@/components/notification-tray"
 
 interface PageHeaderProps {
   title: string
@@ -198,7 +199,10 @@ export function PageHeader({ title, description, showSearch = false, badge, acti
           )}
 
           {/* Additional action buttons slot */}
-          {actions && <div className="flex items-center gap-2">{actions}</div>}
+          <div className="flex items-center gap-2">
+            <NotificationTray />
+            {actions}
+          </div>
         </div>
       </div>
     </div>

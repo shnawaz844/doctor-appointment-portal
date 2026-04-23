@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { SuperAdminPatientTrends } from "@/components/super-admin-patient-trends"
+import { SuperAdminAppointmentTrends } from "@/components/super-admin-appointment-trends"
 import { motion } from "framer-motion"
 
 import { StatCard, ColorScheme } from "@/components/ui/stat-card"
@@ -321,7 +322,10 @@ export default function DashboardPage() {
             className={cn(stats.isSuperAdmin || stats.isAdmin ? "lg:col-span-2" : "lg:col-span-1")}
           >
             {stats.isSuperAdmin || stats.isAdmin ? (
-              <SuperAdminPatientTrends />
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 h-full">
+                <SuperAdminPatientTrends />
+                <SuperAdminAppointmentTrends />
+              </div>
             ) : (
               <div className="glass-premium rounded-3xl h-full flex flex-col overflow-hidden relative">
                 <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-400 to-emerald-500 rounded-t-3xl opacity-50" />
