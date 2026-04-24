@@ -178,6 +178,7 @@ export function SuperAdminAppointmentTrends() {
             </ChartContainer>
           )}
         </div>
+
       </CardContent>
     </Card>
   )
