@@ -38,14 +38,17 @@ export async function POST(request: Request) {
 
         // Generate a unique filename and path by patient
         const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`
-        const filename = `${uniqueSuffix}-${file.name.replace(/\s+/g, '-')}`
+        // Safety check for file.name
+        const originalName = file.name || "document"
+        const safeName = originalName.replace(/\s+/g, '-')
+        const filename = `${uniqueSuffix}-${safeName}`
         const path = `patients/${patientId}/${filename}`
 
         const putCommand = new PutObjectCommand({
             Bucket: bucket,
             Key: path,
             Body: buffer,
-            ContentType: file.type,
+            ContentType: file.type || "application/octet-stream",
         })
 
         try {
@@ -58,7 +61,12 @@ export async function POST(request: Request) {
                 bucket: bucket,
                 path: path
             })
-            return NextResponse.json({ error: "Failed to upload file to Supabase S3", details: error.message }, { status: 500 })
+            return NextResponse.json({ 
+                error: "Failed to upload file to Supabase S3", 
+                details: error.message,
+                bucket,
+                path
+            }, { status: 500 })
         }
 
         // Generate secure internal proxy URL instead of public URL
@@ -68,14 +76,15 @@ export async function POST(request: Request) {
             success: true,
             url: proxyUrl,
             path: `${bucket}/${path}`,
-            filename: file.name
+            filename: originalName
         }, { status: 200 })
 
     } catch (error: any) {
         console.error("[POST /api/opd-online/upload] Error:", error)
         return NextResponse.json({
             error: "Failed to process upload",
-            details: error.message || "Unknown error"
+            details: error.message || "Unknown error",
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         }, { status: 500 })
     }
 }

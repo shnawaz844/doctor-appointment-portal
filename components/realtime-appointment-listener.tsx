@@ -4,11 +4,17 @@ import { useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { requestNotificationPermission, showSystemNotification } from "@/lib/notifications"
 
 export function RealtimeAppointmentListener() {
     const router = useRouter()
 
     useEffect(() => {
+        // Request notification permission when the component mounts
+        requestNotificationPermission()
+
+        let channel: any
+
         const fetchUserAndSubscribe = async () => {
             const meRes = await fetch("/api/auth/me")
             if (!meRes.ok) return
@@ -19,8 +25,10 @@ export function RealtimeAppointmentListener() {
             const doctorId = String(user.doctor_id)
 
             // Subscribe to postgres_changes on the notifications table for real-time alerts
-            const channel = supabase
-                .channel(`doctor-alerts-${doctorId}`)
+            // Use a unique channel name to avoid "after subscribe" collisions in development
+            const channelName = `doctor-alerts-${doctorId}-${Math.random().toString(36).substring(7)}`
+            channel = supabase
+                .channel(channelName)
                 .on(
                     "postgres_changes",
                     {
@@ -43,13 +51,19 @@ export function RealtimeAppointmentListener() {
                                 console.error("[Realtime] Audio play failed:", e)
                             }
 
-                            toast.success(newNotif.title, {
+                             toast.success(newNotif.title, {
                                 description: newNotif.body,
                                 duration: 2000,
                                 action: newNotif.data?.appointmentId ? {
                                     label: "Join Session",
                                     onClick: () => window.open(`https://meet.jit.si/appointment-portal-${newNotif.data.appointmentId}`, "_blank"),
                                 } : undefined,
+                            })
+
+                            // Also show system notification
+                            showSystemNotification(newNotif.title, {
+                                body: newNotif.body,
+                                tag: `payment-${newNotif.id}`,
                             })
 
                             // Refresh current page data to show the updated status
@@ -75,9 +89,15 @@ export function RealtimeAppointmentListener() {
                             audio.play().catch(() => { })
                         } catch (e) { }
 
-                        toast.success(`New Appointment! 📅`, {
+                         toast.success(`New Appointment! 📅`, {
                             description: `${newAppt.patient_name} has booked an appointment for ${newAppt.date} at ${newAppt.time || 'ASAP'}`,
                             duration: 5000,
+                        })
+
+                        // Also show system notification
+                        showSystemNotification(`New Appointment! 📅`, {
+                            body: `${newAppt.patient_name} has booked an appointment for ${newAppt.date} at ${newAppt.time || 'ASAP'}`,
+                            tag: `appt-${newAppt.id}`,
                         })
 
                         // Refresh current page data
@@ -87,13 +107,15 @@ export function RealtimeAppointmentListener() {
                 .subscribe((status) => {
                     console.log(`[Realtime] Subscription status for doctor ${doctorId}:`, status)
                 })
-
-            return () => {
-                supabase.removeChannel(channel)
-            }
         }
 
         fetchUserAndSubscribe()
+
+        return () => {
+            if (channel) {
+                supabase.removeChannel(channel)
+            }
+        }
     }, [router])
 
     return null

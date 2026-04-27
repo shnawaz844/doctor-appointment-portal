@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, Clock, Loader2, RotateCcw, Video, AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -35,6 +34,7 @@ export default function AppointmentsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [mounted, setMounted] = useState(false)
   const [patientSearch, setPatientSearch] = useState("")
+  const [isProcessingEmergency, setIsProcessingEmergency] = useState<string | null>(null)
   const itemsPerPage = 8
 
   const fetchAppointments = async () => {
@@ -64,7 +64,7 @@ export default function AppointmentsPage() {
   useEffect(() => {
     setMounted(true)
     fetchAppointments()
-    
+
     // Read tab from URL
     const tabParam = searchParams.get("tab")
     if (tabParam) {
@@ -97,7 +97,7 @@ export default function AppointmentsPage() {
           filter: `doctor_id=eq.${doctorId}`,
         },
         (payload) => {
-          console.log("[AppointmentsPage] Real-time change detected:", payload.eventType, payload.new?.id || payload.old?.id)
+          console.log("[AppointmentsPage] Real-time change detected:", payload.eventType, (payload.new as any)?.id || (payload.old as any)?.id)
           fetchAppointments()
         }
       )
@@ -166,11 +166,13 @@ export default function AppointmentsPage() {
   }
 
   const handleEmergencyAction = async (apt: any, action: 'approve' | 'reject') => {
+    const aptId = apt.id || apt._id;
     try {
+      setIsProcessingEmergency(`${aptId}-${action}`);
       const res = await fetch("/api/appointments/emergency", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: apt.id || apt._id, action }),
+        body: JSON.stringify({ id: aptId, action }),
       });
 
       if (res.ok) {
@@ -181,6 +183,8 @@ export default function AppointmentsPage() {
       }
     } catch (error) {
       console.error(`Failed to execute emergency action:`, error);
+    } finally {
+      setIsProcessingEmergency(null);
     }
   }
 
@@ -280,8 +284,8 @@ export default function AppointmentsPage() {
       </div>
 
       <div className="container mx-auto relative py-6 md:py-10 px-4 md:px-8">
-        <PageHeader 
-          title="Appointments" 
+        <PageHeader
+          title="Appointments"
           description="Schedule and manage patient appointments"
           badge="Aura Healthcare"
         />
@@ -520,7 +524,7 @@ export default function AppointmentsPage() {
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-red-600/70 h-12 w-10">S.no</TableHead>
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-red-600/70 h-12">Patient Name</TableHead>
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-red-600/70 h-12">Contact</TableHead>
-                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-red-600/70 h-12">Time</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-red-600/70 h-12 text-center">Time</TableHead>
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-red-600/70 h-12">Doctor</TableHead>
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-red-600/70 h-12">Status</TableHead>
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-red-600/70 h-12 text-center">Action</TableHead>
@@ -541,11 +545,15 @@ export default function AppointmentsPage() {
                               <TableCell className="font-mono text-[11px] text-slate-500 py-4">
                                 {formatPhoneWithPrefix(apt.phone)}
                               </TableCell>
-                              <TableCell className="py-4">
-                                <div className="flex items-center gap-2 text-sm font-black text-red-600 dark:text-red-400 bg-red-500/5 rounded-lg px-2 py-1 w-fit">
-                                  <Clock className="h-3.5 w-3.5" />
-                                  {apt.time || "ASAP"}
-                                </div>
+                              <TableCell className="py-4 text-center">
+                                {apt.status === 'Rejected' ? (
+                                  <span className="text-slate-400 font-black uppercase text-[10px] tracking-widest">N/A</span>
+                                ) : (
+                                  <div className="flex items-center justify-center gap-2 text-sm font-black text-red-600 dark:text-red-400 bg-red-500/5 rounded-lg px-3 py-1.5 w-fit mx-auto">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    {apt.time || "ASAP"}
+                                  </div>
+                                )}
                               </TableCell>
                               <TableCell className="font-bold text-sm text-slate-700 dark:text-slate-200 py-4">{apt.doctor}</TableCell>
                               <TableCell className="py-4">
@@ -564,20 +572,42 @@ export default function AppointmentsPage() {
                                         size="sm"
                                         className="h-8 flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-95 px-3"
                                         onClick={() => handleEmergencyAction(apt, 'approve')}
+                                        disabled={!!isProcessingEmergency && isProcessingEmergency.startsWith(apt.id || apt._id)}
                                       >
-                                        Approve
+                                        {isProcessingEmergency === `${apt.id || apt._id}-approve` ? (
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                        ) : (
+                                          "Approve"
+                                        )}
                                       </Button>
                                       <Button
                                         variant="outline"
                                         size="sm"
                                         className="h-8 flex-1 border-rose-200 dark:border-rose-900/50 bg-white/50 dark:bg-transparent text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all hover:scale-[1.02] active:scale-95 px-3"
                                         onClick={() => handleEmergencyAction(apt, 'reject')}
+                                        disabled={!!isProcessingEmergency && isProcessingEmergency.startsWith(apt.id || apt._id)}
                                       >
-                                        Reject
+                                        {isProcessingEmergency === `${apt.id || apt._id}-reject` ? (
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                        ) : (
+                                          "Reject"
+                                        )}
                                       </Button>
                                     </div>
                                   </div>
-                                ) : (
+                                ) : apt.status === 'Rejected' ? (
+                                  <div className="flex items-center justify-center">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400 bg-red-500/5 px-3 py-1.5 rounded-lg border border-red-200/50">
+                                      Not approved
+                                    </span>
+                                  </div>
+                                ) : apt.status === 'Awaiting Payment' ? (
+                                  <div className="flex items-center justify-center">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 bg-amber-500/5 px-3 py-1.5 rounded-lg border border-amber-200/50">
+                                      Awaiting Approval
+                                    </span>
+                                  </div>
+                                ) : (apt.status === 'Scheduled' || apt.status === 'Confirmed' || apt.status === 'Completed') ? (
                                   <div className="flex items-center justify-center gap-1.5">
                                     {user && user.role !== "STAFF" && (
                                       <CreatePrescriptionDialog preselectedPatientId={apt.patient_id} appointmentId={apt.id || apt._id}>
@@ -602,7 +632,7 @@ export default function AppointmentsPage() {
                                       </Button>
                                     </EditAppointmentDialog>
                                   </div>
-                                )}
+                                ) : null}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -625,7 +655,7 @@ export default function AppointmentsPage() {
                           {activeTab !== "today" && activeTab !== "online" && (
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Date</TableHead>
                           )}
-                          <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Time</TableHead>
+                          <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12 text-center">Time</TableHead>
                           <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Doctor</TableHead>
                           <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Specialty</TableHead>
                           {activeTab !== "online" && activeTab !== "allOnline" && (
@@ -697,11 +727,15 @@ export default function AppointmentsPage() {
                                   </div>
                                 </TableCell>
                               )}
-                              <TableCell className="py-4">
-                                <div className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
-                                  <Clock className="h-3.5 w-3.5 text-amber-500" />
-                                  {apt.time}
-                                </div>
+                              <TableCell className="py-4 text-center">
+                                {apt.status === 'Rejected' || apt.status === 'Cancelled' || !apt.time ? (
+                                  <span className="text-slate-400 font-black uppercase text-[10px] tracking-widest">N/A</span>
+                                ) : (
+                                  <div className="flex items-center justify-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300 w-fit mx-auto">
+                                    <Clock className="h-3.5 w-3.5 text-amber-500" />
+                                    {apt.time}
+                                  </div>
+                                )}
                               </TableCell>
                               <TableCell className="font-bold text-sm text-slate-700 dark:text-slate-200 py-4">{apt.doctor}</TableCell>
                               <TableCell className="py-4">

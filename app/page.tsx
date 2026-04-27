@@ -104,7 +104,7 @@ export default function DashboardPage() {
 
         const upcomingAppts = todayAppts
           .filter((a: any) => {
-            if (a.status === "Cancelled" || a.status === "Completed") return false
+            if (a.status === "Cancelled" || a.status === "Completed" || !a.time) return false
             const [hours, minutes] = a.time.split(":").map(Number)
             const apptTime = new Date()
             apptTime.setHours(hours, minutes, 0, 0)

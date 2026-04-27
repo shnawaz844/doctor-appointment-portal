@@ -19,8 +19,12 @@ export function NotificationTray() {
     const [unreadCount, setUnreadCount] = useState(0)
     const [loading, setLoading] = useState(true)
     const [doctorId, setDoctorId] = useState<string | null>(null)
+    const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
+        setMounted(true)
+        let channel: any
+
         async function init() {
             const meRes = await fetch("/api/auth/me")
             if (!meRes.ok) return
@@ -30,9 +34,10 @@ export function NotificationTray() {
                 setDoctorId(id)
                 fetchNotifications(id)
 
-                // Subscribe to new notifications
-                const channel = supabase
-                    .channel(`doctor-notifications-${id}`)
+                // Subscribe to new notifications with a unique channel name to avoid collisions
+                const channelName = `doctor-notifications-${id}-${Math.random().toString(36).substring(7)}`
+                channel = supabase
+                    .channel(channelName)
                     .on(
                         "postgres_changes",
                         {
@@ -49,13 +54,15 @@ export function NotificationTray() {
                     .subscribe((status) => {
                         console.log(`[Tray] Notification subscription status for doctor ${id}:`, status)
                     })
-
-                return () => {
-                    supabase.removeChannel(channel)
-                }
             }
         }
         init()
+
+        return () => {
+            if (channel) {
+                supabase.removeChannel(channel)
+            }
+        }
     }, [])
 
     async function fetchNotifications(id: string) {
@@ -116,6 +123,18 @@ export function NotificationTray() {
                 setUnreadCount(prev => Math.max(0, prev - 1))
             }
         }
+    }
+
+    if (!mounted) {
+        return (
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11 rounded-2xl bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-border/70 text-muted-foreground"
+            >
+                <Bell className="h-5 w-5" />
+            </Button>
+        )
     }
 
     return (
