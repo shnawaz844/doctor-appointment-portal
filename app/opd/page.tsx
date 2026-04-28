@@ -195,6 +195,9 @@ export default function OPDPage() {
                     address: formData.address,
                     guardianName: formData.guardianName,
                     unique_citizen_card_number: formData.uniqueCitizenCardNumber,
+                    patientType: formData.patientType,
+                    tokenNo: formData.tokenNo,
+                    opdNo: formData.opdNo,
                 }
 
                 console.log("Creating new patient:", newPatientPayload)
@@ -219,9 +222,10 @@ export default function OPDPage() {
                 }
             }
 
-            // 2. Create OPD Registration
-            console.log("Creating OPD registration with UHID:", finalUhid)
-            const response = await fetch("/api/opd", {
+            // 2. Create OPD Registration (Only if not a new patient, as /api/patients already creates it)
+            if (existingPatient) {
+                console.log("Creating OPD registration for existing patient with UHID:", finalUhid)
+                const response = await fetch("/api/opd", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -272,8 +276,11 @@ export default function OPDPage() {
                     console.error("Failed to book appointment:", aptErr)
                     toast.error("OPD saved, but failed to book appointment automatically")
                 }
-            } catch (aptError) {
-                console.error("Error booking appointment:", aptError)
+                } catch (aptError) {
+                    console.error("Error booking appointment:", aptError)
+                }
+            } else {
+                console.log("Skipping manual OPD/Appointment creation as it was handled by patient registration")
             }
 
 
@@ -289,7 +296,15 @@ export default function OPDPage() {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target
-        setFormData((prev) => ({ ...prev, [name]: value }))
+        if (name === "mobileNo") {
+      let val = value
+      if (val.startsWith("+91") && val.length > 3 && val[3] !== " ") {
+        val = `+91 ${val.substring(3)}`
+      }
+      setFormData((prev) => ({ ...prev, [name]: val }))
+      return
+    }
+    setFormData((prev) => ({ ...prev, [name]: value }))
         // Clear error when user types
         if (errors[name]) {
             setErrors(prev => {

@@ -82,3 +82,112 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Internal server error" }, { status: 500 })
     }
 }
+
+// DELETE /api/auth/admin/users - Delete a user (Admin only)
+export async function DELETE(req: Request) {
+    try {
+        const session = await getAuthSession()
+        if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+        }
+
+        const { searchParams } = new URL(req.url)
+        const userId = searchParams.get("userId")
+
+        if (!userId) {
+            return NextResponse.json({ error: "User ID is required" }, { status: 400 })
+        }
+
+        // Prevent self-deletion
+        if (userId === session.id) {
+            return NextResponse.json({ error: "Cannot delete your own account" }, { status: 400 })
+        }
+
+        // Security check: If requester is ADMIN, ensure target is in same hospital and NOT a super admin
+        if (session.role === "ADMIN") {
+            const { data: targetUser } = await supabase
+                .from("users")
+                .select("role, hospital_id")
+                .eq("id", userId)
+                .single()
+
+            if (!targetUser || targetUser.role === "SUPER_ADMIN" || targetUser.hospital_id !== session.hospital_id) {
+                return NextResponse.json({ error: "Unauthorized to delete this user" }, { status: 403 })
+            }
+        }
+
+        const { error: deleteErr } = await supabase
+            .from("users")
+            .delete()
+            .eq("id", userId)
+
+        if (deleteErr) throw deleteErr
+
+        return NextResponse.json({ message: "User deleted successfully" })
+    } catch (error) {
+        console.error("Failed to delete user:", error)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
+}
+
+// PATCH /api/auth/admin/users - Update user details (Admin only)
+export async function PATCH(req: Request) {
+    try {
+        const session = await getAuthSession()
+        if (!session || (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+        }
+
+        const { userId, name, email, role } = await req.json()
+        if (!userId) {
+            return NextResponse.json({ error: "User ID is required" }, { status: 400 })
+        }
+
+        // Security check: If requester is ADMIN, ensure target is in same hospital and NOT a super admin
+        if (session.role === "ADMIN") {
+            const { data: targetUser } = await supabase
+                .from("users")
+                .select("role, hospital_id")
+                .eq("id", userId)
+                .single()
+
+            if (!targetUser || targetUser.role === "SUPER_ADMIN" || targetUser.hospital_id !== session.hospital_id) {
+                return NextResponse.json({ error: "Unauthorized to modify this user" }, { status: 403 })
+            }
+        }
+
+        // Check if email is already taken if it's being changed
+        if (email) {
+            const { data: existingUser } = await supabase
+                .from("users")
+                .select("id")
+                .eq("email", email)
+                .neq("id", userId)
+                .maybeSingle()
+
+            if (existingUser) {
+                return NextResponse.json({ error: "Email is already in use" }, { status: 400 })
+            }
+        }
+
+        const updateData: any = {}
+        if (name) updateData.name = name
+        if (email) updateData.email = email
+        if (role) updateData.role = role
+        updateData.updated_at = new Date().toISOString()
+
+        const { error: updateErr } = await supabase
+            .from("users")
+            .update(updateData)
+            .eq("id", userId)
+
+        if (updateErr) throw updateErr
+
+        return NextResponse.json({ message: "User updated successfully" })
+    } catch (error) {
+        console.error("Failed to update user:", error)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
+}
+
+

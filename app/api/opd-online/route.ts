@@ -11,7 +11,7 @@ function validateApiKey(request: Request): boolean {
 /**
  * POST /api/opd-online
  * ─────────────────────────────────────────────────────────────────────────────
- * Public endpoint for online OPD booking from the PGF app.
+ * Public endpoint for online OPD booking from the Mobile App.
  * Automatically creates:
  * 1. A Patient record (if not exists)
  * 2. An OPD Registration record
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
                     .eq("id", finalUhid)
             } else {
                 // Create NEW patient
-                finalUhid = `P${Math.floor(1000 + Math.random() * 9000).toString()}`
+                finalUhid = crypto.randomUUID()
                 const now = new Date()
                 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
                     age: parseInt(age) || 0,
                     gender: gender || "Others",
                     phone: phone,
-                    address: address || "PGF Area",
+                    address: address || "Mobile App User",
                     guardian_name: guardianName || "",
                     unique_citizen_card_number: citizenId,
                     diagnosis: "Online OPD Booking",
@@ -184,7 +184,7 @@ export async function POST(request: Request) {
             mobile_no: phone,
             valid_upto: formatDateForUpto(validDateUTC),
             consultant: consultantName,
-            address: address || "PGF Area",
+            address: address || "Mobile App User",
             patient_type: "Online Client",
             unique_citizen_card_number: citizenId,
             doctor_id: doctorId,
@@ -232,7 +232,7 @@ export async function POST(request: Request) {
             date: date,
             doctor: consultantName,
             status: "Active",
-            summary: "Uploaded via PGF app booking (Medical Report)",
+            summary: "Uploaded via Mobile App booking (Medical Report)",
             attachment_url: url,
             attachment_type: url.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg",
             unique_citizen_card_number: citizenId
@@ -253,8 +253,8 @@ export async function POST(request: Request) {
                 issued: date,
                 status: "Active",
                 doctor_name: consultantName,
-                doctor_id: doctorId || "PGF-APP",
-                instructions: "Uploaded via PGF app booking",
+                doctor_id: doctorId || "MOBILE-APP",
+                instructions: "Uploaded via Mobile App booking",
                 attachment_url: url,
                 attachment_type: url.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg",
                 unique_citizen_card_number: citizenId

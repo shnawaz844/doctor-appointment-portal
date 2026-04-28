@@ -37,6 +37,21 @@ export default function AppointmentsPage() {
   const [isProcessingEmergency, setIsProcessingEmergency] = useState<string | null>(null)
   const itemsPerPage = 8
 
+  const checkIsOnline = (a: any) => {
+    return (a.type !== "OPD" && a.type === "Online Consultation") ||
+      a.type === "Online OPD" ||
+      a.type === "Emergency" ||
+      (a.type !== "OPD" && (
+        a.notes?.includes("[Online Booking]") ||
+        a.notes?.includes("[Booked From MOBILE APP]") ||
+        a.notes?.includes("Online Teleconsultation") ||
+        a.notes?.includes("Online appointment")
+      ))
+  }
+
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
   const fetchAppointments = async () => {
     try {
       const [apptsRes, meRes, docsRes, specsRes] = await Promise.all([
@@ -196,17 +211,7 @@ export default function AppointmentsPage() {
     let match = true
     if (filterDoctor !== "all" && a.doctor !== filterDoctor) match = false
 
-    const now = new Date()
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    const isOnline = (a.type !== "OPD" && a.type === "Online Consultation") ||
-      a.type === "Online OPD" ||
-      a.type === "Emergency" ||
-      (a.type !== "OPD" && (
-        a.notes?.includes("[Online Booking]") ||
-        a.notes?.includes("[Booked From MOBILE APP]") ||
-        a.notes?.includes("Online Teleconsultation") ||
-        a.notes?.includes("Online appointment")
-      ))
+    const isOnline = checkIsOnline(a)
 
     if (activeTab === "today" && (a.date !== today || isOnline)) match = false
     if (activeTab === "all" && isOnline) match = false
@@ -261,9 +266,11 @@ export default function AppointmentsPage() {
   }
 
   const stats = {
-    total: filteredAppointments.length,
-    scheduled: filteredAppointments.filter(a => a.status === "Scheduled" || a.status === "Confirmed").length,
-    completed: filteredAppointments.filter(a => a.status === "Completed").length
+    totalToday: appointments.filter(a => a.date === today).length,
+    onlineToday: appointments.filter(a => a.date === today && checkIsOnline(a)).length,
+    offlineToday: appointments.filter(a => a.date === today && !checkIsOnline(a)).length,
+    scheduled: appointments.filter(a => a.status === "Scheduled" || a.status === "Confirmed").length,
+    completed: appointments.filter(a => a.status === "Completed").length
   }
 
   const emergencyAppts = filteredAppointments.filter(a => a.type === "Emergency")
@@ -312,29 +319,58 @@ export default function AppointmentsPage() {
         )}
 
         {/* Appointment Stats */}
-        <div className="grid gap-4 md:gap-8 grid-cols-1 md:grid-cols-3 mb-8 md:mb-10">
+        <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-8 md:mb-10">
           <StatCard
             label="Total Appointments"
-            value={stats.total}
+            value={stats.totalToday}
             icon={Calendar}
-            subLabel="This month"
+            subLabel="Today"
             colorScheme="blue"
             loading={loading}
           />
           <StatCard
+            label="Offline Appts"
+            value={stats.offlineToday}
+            icon={Clock}
+            subLabel="Today's Offline"
+            colorScheme="emerald"
+            loading={loading}
+            onClick={() => {
+              changeTab("today")
+              setFilterDate("")
+              setFilterMonth("all")
+              setFilterYear("all")
+            }}
+          />
+          <StatCard
+            label="Online Appts"
+            value={stats.onlineToday}
+            icon={Video}
+            subLabel="Today's Online"
+            colorScheme="indigo"
+            loading={loading}
+            onClick={() => {
+              changeTab("online")
+              setFilterDate("")
+              setFilterMonth("all")
+              setFilterYear("all")
+            }}
+          />
+
+          <StatCard
             label="Scheduled"
             value={stats.scheduled}
-            icon={Clock}
-            subLabel="Upcoming"
-            colorScheme="emerald"
+            icon={Loader2}
+            subLabel="All Upcoming"
+            colorScheme="violet"
             loading={loading}
           />
           <StatCard
             label="Completed"
             value={stats.completed}
-            icon={Loader2}
-            subLabel="This month"
-            colorScheme="amber"
+            icon={RotateCcw}
+            subLabel="All Completed"
+            colorScheme="cyan"
             loading={loading}
           />
         </div>

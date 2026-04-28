@@ -119,15 +119,15 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
           // Try matching by email first, then by name (more robust than strict equality)
           const doctorEmail = authData.user.email?.toLowerCase().trim();
           const doctorName = authData.user.name?.toLowerCase().trim().replace(/^dr\.\s*/i, "");
-          
+
           const doc = fetchedDoctors.find(d => {
             const dEmail = d.email?.toLowerCase().trim();
             const dName = d.name?.toLowerCase().trim().replace(/^dr\.\s*/i, "");
-            
-            return (doctorEmail && dEmail === doctorEmail) || 
-                   (doctorName && dName === doctorName);
+
+            return (doctorEmail && dEmail === doctorEmail) ||
+              (doctorName && dName === doctorName);
           });
-          
+
           if (doc) {
             setSelectedDoctorId(doc.id);
           }
@@ -230,7 +230,7 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
               <div className="space-y-2 min-w-0">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Select Patient</Label>
                 <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
-                  <SelectTrigger className="w-full h-12 rounded-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-[#e05d38]/20 focus:border-[#e05d38] shadow-sm transition-all overflow-hidden">
+                  <SelectTrigger className="w-full h-12 rounded-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-[#155dfc]/20 focus:border-[#155dfc] shadow-sm transition-all overflow-hidden">
                     <div className="truncate pr-2">
                       <SelectValue placeholder={loadingMetadata ? "Searching..." : "Choose patient"} />
                     </div>
@@ -252,7 +252,7 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
                 <div className="space-y-2 min-w-0">
                   <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Prescribing Doctor</Label>
                   <Select value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
-                    <SelectTrigger className="w-full h-12 rounded-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-[#e05d38]/20 focus:border-[#e05d38] shadow-sm transition-all overflow-hidden">
+                    <SelectTrigger className="w-full h-12 rounded-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-[#155dfc]/20 focus:border-[#155dfc] shadow-sm transition-all overflow-hidden">
                       <div className="truncate pr-2">
                         <SelectValue placeholder={loadingMetadata ? "Searching..." : "Choose doctor"} />
                       </div>
@@ -261,8 +261,8 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
                       {doctors.map((d) => (
                         <SelectItem key={d.id} value={d.id} className="rounded-xl py-3 px-4">
                           <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-[#e05d38]/10 flex items-center justify-center">
-                              <User className="h-4 w-4 text-[#e05d38]" />
+                            <div className="h-8 w-8 rounded-full bg-[#155dfc]/10 flex items-center justify-center">
+                              <User className="h-4 w-4 text-[#155dfc]" />
                             </div>
                             <span className="font-bold text-sm">{d.name}</span>
                           </div>
@@ -278,13 +278,13 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
             {selectedPatientId && (
               <div className="space-y-4 p-6 rounded-3xl bg-blue-500/5 border border-blue-200/30 dark:border-blue-800/30">
                 <div className="flex items-center gap-2 mb-2">
-                  <History className="h-4 w-4 text-[#e05d38]" />
+                  <History className="h-4 w-4 text-[#155dfc]" />
                   <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">Previous Medications</h3>
                 </div>
 
                 {loadingHistory ? (
                   <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-4 w-4 animate-spin text-[#e05d38]" />
+                    <Loader2 className="h-4 w-4 animate-spin text-[#155dfc]" />
                   </div>
                 ) : previousPrescriptions.length > 0 ? (
                   <div className="space-y-3 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
@@ -301,7 +301,7 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
                           </Badge>
                         </div>
                         <div className="space-y-2">
-                          {rx.medications.map((m: any, idx: number) => (
+                          {rx.medications?.map((m: any, idx: number) => (
                             <div key={idx} className="flex items-start gap-2.5 group">
                               <div className="h-6 w-6 rounded-lg bg-blue-500/10 flex items-center justify-center mt-0.5">
                                 <Pill className="h-3 w-3 text-blue-600" />
@@ -350,11 +350,11 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Medication {index + 1}</Label>
                     <div className="relative group/input">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-[#e05d38] transition-colors" />
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-[#155dfc] transition-colors" />
                       <Input
                         value={med.medication}
                         onChange={(e) => updateMedication(index, "medication", e.target.value)}
-                        className="h-12 border border-slate-200 dark:border-slate-800 focus:ring-[#e05d38]/20 focus:border-[#e05d38] pl-11 rounded-full bg-white dark:bg-slate-900 shadow-sm transition-all"
+                        className="h-12 border border-slate-200 dark:border-slate-800 focus:ring-[#155dfc]/20 focus:border-[#155dfc] pl-11 rounded-full bg-white dark:bg-slate-900 shadow-sm transition-all"
                         placeholder="e.g., Amoxicillin 500mg"
                       />
                     </div>
@@ -366,7 +366,7 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
                       <Input
                         value={med.dosage}
                         onChange={(e) => updateMedication(index, "dosage", e.target.value)}
-                        className="h-12 border border-slate-200 dark:border-slate-800 focus:ring-[#e05d38]/20 focus:border-[#e05d38] rounded-full bg-white dark:bg-slate-900 shadow-sm transition-all"
+                        className="h-12 border border-slate-200 dark:border-slate-800 focus:ring-[#155dfc]/20 focus:border-[#155dfc] rounded-full bg-white dark:bg-slate-900 shadow-sm transition-all"
                         placeholder="e.g., 2 times daily"
                       />
                     </div>
@@ -376,7 +376,7 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
                         type="number"
                         value={med.quantity}
                         onChange={(e) => updateMedication(index, "quantity", e.target.value)}
-                        className="h-12 border border-slate-200 dark:border-slate-800 focus:ring-[#e05d38]/20 focus:border-[#e05d38] rounded-full bg-white dark:bg-slate-900 shadow-sm transition-all"
+                        className="h-12 border border-slate-200 dark:border-slate-800 focus:ring-[#155dfc]/20 focus:border-[#155dfc] rounded-full bg-white dark:bg-slate-900 shadow-sm transition-all"
                         placeholder="Count"
                       />
                     </div>
@@ -389,7 +389,7 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
               <div className="space-y-2 min-w-0">
                 <Label htmlFor="status" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Initial Status</Label>
                 <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger id="status" className="w-full h-12 rounded-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-[#e05d38]/20 focus:border-[#e05d38] shadow-sm transition-all">
+                  <SelectTrigger id="status" className="w-full h-12 rounded-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-[#155dfc]/20 focus:border-[#155dfc] shadow-sm transition-all">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-800">
@@ -401,7 +401,7 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
               <div className="space-y-2 min-w-0">
                 <Label htmlFor="duration" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Treatment Duration</Label>
                 <Select value={duration} onValueChange={setDuration}>
-                  <SelectTrigger id="duration" className="w-full h-12 rounded-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-[#e05d38]/20 focus:border-[#e05d38] shadow-sm transition-all">
+                  <SelectTrigger id="duration" className="w-full h-12 rounded-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-[#155dfc]/20 focus:border-[#155dfc] shadow-sm transition-all">
                     <SelectValue placeholder="Select timeframe" />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-800">
@@ -426,7 +426,7 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
                 placeholder="Dosage warnings or specific clinical instructions..."
-                className="rounded-3xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-[#e05d38]/20 focus:border-[#e05d38] min-h-[120px] resize-none shadow-sm transition-all p-4 font-semibold"
+                className="rounded-3xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-[#155dfc]/20 focus:border-[#155dfc] min-h-[120px] resize-none shadow-sm transition-all p-4 font-semibold"
               />
             </div>
           </div>
@@ -445,7 +445,7 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
             <Button
               onClick={handleSubmit}
               disabled={loading || !selectedPatientId || !selectedDoctorId || medications.filter(m => m.medication && m.dosage && m.quantity).length === 0}
-              className="rounded-full px-10 h-12 bg-[#e05d38] hover:bg-[#c14a27] text-white shadow-xl shadow-[#e05d38]/25 transition-all hover:scale-[1.02] active:scale-[0.98] font-bold"
+              className="rounded-full px-10 h-12 bg-[#155dfc] hover:bg-[#2017d4] text-white shadow-xl shadow-[#155dfc]/25 transition-all hover:scale-[1.02] active:scale-[0.98] font-bold"
             >
               {loading ? (
                 <>

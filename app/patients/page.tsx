@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { formatPhoneWithPrefix } from "@/lib/phone"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Filter, Eye, ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react"
@@ -195,8 +196,8 @@ export default function PatientsPage() {
                             <TableCell className="font-medium">{patient.name}</TableCell>
                             <TableCell>{patient.age}</TableCell>
                             <TableCell className="text-muted-foreground">{patient.gender}</TableCell>
-                            <TableCell className="text-muted-foreground font-medium">
-                              {patient.phone}
+                            <TableCell className="text-slate-500 font-medium">
+                              {formatPhoneWithPrefix(patient.phone)}
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline" className={cn("px-2.5 py-0.5 font-semibold", getDiagnosisColor(patient.diagnosis))}>

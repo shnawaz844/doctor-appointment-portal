@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { formatPhoneWithPrefix } from "@/lib/phone"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
@@ -188,7 +189,7 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                 </Button>
               </CreatePrescriptionDialog>
               <CreateAppointmentDialog preselectedPatientId={patient.id}>
-                <Button className="flex-1 sm:flex-none rounded-full px-6 bg-[#e05d38] hover:bg-[#c14a27] text-white shadow-lg shadow-[#e05d38]/20 hover:scale-105 transition-all font-bold">
+                <Button className="rounded-full px-6 bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/40 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900 transition-all font-bold">
                   <Calendar className="h-4 w-4 mr-2" />
                   Schedule Visit
                 </Button>
@@ -242,7 +243,7 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                     <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Phone</p>
-                      <p className="text-base font-medium text-foreground">{patient.phone}</p>
+                      <p className="text-base font-medium text-foreground">{formatPhoneWithPrefix(patient.phone)}</p>
                     </div>
                   </div>
                   <Separator />
@@ -282,7 +283,7 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                     <>
                       <Separator />
                       <div>
-                        <p className="text-sm font-medium mb-2 text-[#e05d38]">Appointment Notes</p>
+                        <p className="text-sm font-medium mb-2 text-[#155dfc]">Appointment Notes</p>
                         {(() => {
                           const notes = patientAppointments[0].notes;
                           const tagMatch = notes.match(/\[.*?\]/);
@@ -396,7 +397,7 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                   <CardDescription className="text-sm font-medium text-slate-500">Imaging and diagnostic reports organized by type</CardDescription>
                 </div>
                 <CreateMedicalRecordDialog preselectedPatientId={id}>
-                  <Button className="w-full sm:w-auto rounded-full px-8 bg-[#e05d38] hover:bg-[#c04d28] text-white shadow-lg shadow-[#e05d38]/20 hover:scale-105 transition-all font-bold">
+                  <Button className="rounded-full px-6 bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/40 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900 transition-all font-bold">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Report
                   </Button>
@@ -434,7 +435,7 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                                 href={record.attachment_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="h-8 w-8 flex items-center justify-center rounded-lg text-[#e05d38] hover:bg-[#e05d38]/10 transition-all"
+                                className="h-8 w-8 flex items-center justify-center rounded-lg text-[#155dfc] hover:bg-[#155dfc]/10 transition-all"
                                 title="View Attachment"
                               >
                                 {record.attachment_type?.startsWith("image/") ? (
@@ -508,18 +509,17 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                         </div>
                         <div className="flex items-center gap-4 shrink-0 sm:self-auto self-end">
                           <div className="text-right hidden sm:block">
-                            <p className={`text-xs font-black uppercase tracking-wider ${
-                              result.result === 'Normal' ? 'text-emerald-600' : 
+                            <p className={`text-xs font-black uppercase tracking-wider ${result.result === 'Normal' ? 'text-emerald-600' :
                               result.result === 'Abnormal' ? 'text-rose-600' : 'text-amber-600'
-                            }`}>
+                              }`}>
                               {result.result}
                             </p>
                             <p className="text-[9px] font-bold text-slate-400 uppercase">{result.status}</p>
                           </div>
                           <div className="flex items-center gap-1">
                             {result.attachment_url && (
-                              <ViewAttachmentButton 
-                                url={result.attachment_url} 
+                              <ViewAttachmentButton
+                                url={result.attachment_url}
                                 type={result.attachment_type}
                                 label="View File"
                               />
@@ -558,7 +558,7 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                   preselectedPatientName={patient.name}
                   preselectedDoctor={patient.doctor}
                 >
-                  <Button className="rounded-full px-8 bg-[#e05d38] hover:bg-[#c04d28] text-white shadow-lg shadow-[#e05d38]/20 hover:scale-105 transition-all font-bold">
+                  <Button className="rounded-full px-6 bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/40 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900 transition-all font-bold">
                     <FileImage className="h-4 w-4 mr-2" />
                     New Imaging Study
                   </Button>
@@ -579,7 +579,7 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                   <CardDescription className="text-xs font-medium text-slate-500">Patient's medication history and active prescriptions</CardDescription>
                 </div>
                 <CreatePrescriptionDialog preselectedPatientId={patient.id}>
-                  <Button className="rounded-full px-8 bg-[#e05d38] hover:bg-[#c04d28] text-white shadow-lg shadow-[#e05d38]/20 hover:scale-105 transition-all font-bold">
+                  <Button className="rounded-full px-6 bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/40 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900 transition-all font-bold">
                     <Plus className="h-4 w-4 mr-2" />
                     New Prescription
                   </Button>
@@ -667,8 +667,8 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                   {uploadedPrescriptions.length > 0 && (
                     <div className="mt-12 space-y-6">
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-[#e05d38]/10 flex items-center justify-center">
-                          <FileText className="h-4 w-4 text-[#e05d38]" />
+                        <div className="h-8 w-8 rounded-lg bg-[#155dfc]/10 flex items-center justify-center">
+                          <FileText className="h-4 w-4 text-[#155dfc]" />
                         </div>
                         <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Uploaded Prescription Files</h3>
                       </div>

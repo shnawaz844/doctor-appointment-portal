@@ -108,7 +108,7 @@ export function ViewMedicalRecordDialog({ record, children }: ViewMedicalRecordD
                                     href={record.attachment_url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-[10px] font-black text-[#e05d38] hover:underline uppercase tracking-widest"
+                                    className="text-[10px] font-black text-[#155dfc] hover:underline uppercase tracking-widest"
                                 >
                                     Open Full View
                                 </a>

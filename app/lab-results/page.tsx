@@ -67,11 +67,11 @@ export default function LabResultsPage() {
 
   const filteredResults = labResults.filter((result) => {
     const matchesStatus = filterStatus === "all" || result.status === filterStatus
-    const matchesSearch = 
+    const matchesSearch =
       result.patient_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       result.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       result.test_name.toLowerCase().includes(searchQuery.toLowerCase())
-    
+
     return matchesStatus && matchesSearch
   })
 
@@ -135,7 +135,7 @@ export default function LabResultsPage() {
               <h3 className="text-xl font-black text-slate-900 dark:text-white">Recent Lab Results</h3>
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Detailed overview of diagnostic metrics</p>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row items-center gap-3">
               <div className="relative w-full sm:w-[300px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -147,7 +147,7 @@ export default function LabResultsPage() {
                 />
               </div>
               <CreateLabResultDialog onCreated={fetchLabResults}>
-                <Button className="w-full sm:w-auto rounded-xl px-6 bg-[#e05d38] text-white hover:bg-[#c94f2f] hover:scale-105 transition-transform h-10 shadow-lg shadow-[#e05d38]/20">
+                <Button className="w-full sm:w-auto rounded-xl px-6 bg-[#155dfc] text-white hover:bg-[#2918e1] hover:scale-105 transition-transform h-10 shadow-lg shadow-[#155dfc]/20">
                   <Plus className="h-4 w-4 mr-2" />
                   Create Lab Result
                 </Button>
@@ -416,7 +416,7 @@ export default function LabResultsPage() {
 
       {/* Image Preview Modal */}
       {previewUrl && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-in fade-in duration-300"
           onClick={() => setPreviewUrl(null)}
         >
@@ -430,15 +430,15 @@ export default function LabResultsPage() {
               <X className="h-8 w-8" />
             </Button>
             <div className="bg-white p-2 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-300">
-              <img 
-                src={previewUrl} 
-                alt="Preview" 
+              <img
+                src={previewUrl}
+                alt="Preview"
                 className="max-h-[80vh] w-auto rounded-2xl object-contain mx-auto"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
             <div className="mt-6 flex gap-4">
-              <Button 
+              <Button
                 asChild
                 className="rounded-full px-8 bg-blue-600 hover:bg-blue-700 shadow-xl"
               >
@@ -447,7 +447,7 @@ export default function LabResultsPage() {
                   Download Image
                 </a>
               </Button>
-              <Button 
+              <Button
                 variant="outline"
                 className="rounded-full px-8 bg-white/10 text-white border-white/20 hover:bg-white/20"
                 onClick={() => setPreviewUrl(null)}

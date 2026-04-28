@@ -53,7 +53,11 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
 
           // If the logged in user is a doctor, auto-set them
           if (meData.user?.role === "DOCTOR") {
-            setFormData(prev => ({ ...prev, doctor: meData.user.name }))
+            setFormData(prev => ({
+              ...prev,
+              doctor: meData.user.name,
+              diagnosis: meData.user.specialty || ""
+            }))
           }
         }
       } catch (error) {
@@ -124,7 +128,6 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
       }
 
       const payload = {
-        id: `P${Math.floor(1000 + Math.random() * 9000).toString()}`,
         name: formData.name,
         age: Number(formData.age),
         gender: formData.gender,
@@ -158,7 +161,7 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
           gender: "",
           phone: "",
           email: "",
-          diagnosis: "",
+          diagnosis: currentUser?.role === "DOCTOR" ? (currentUser.specialty || "") : "",
           doctor: currentUser?.role === "DOCTOR" ? currentUser.name : "",
           laterality: "",
           severity: "",
@@ -189,7 +192,7 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-500/10 blur-3xl -ml-12 -mb-12 rounded-full" />
           <div className="flex items-center justify-between relative">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-[#e05d38] rounded-2xl shadow-lg shadow-emerald-500/20 text-white">
+              <div className="p-3 bg-[#155dfc] rounded-2xl shadow-lg shadow-emerald-500/20 text-white">
                 <User className="w-6 h-6" />
               </div>
               <div>
@@ -203,7 +206,7 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
                   key={s}
                   className={cn(
                     "w-2 h-2 rounded-full transition-all duration-300",
-                    s === step ? "w-6 bg-[#e05d38]" : s < step ? "bg-[#e05d38]" : "bg-slate-300 dark:bg-slate-700"
+                    s === step ? "w-6 bg-[#155dfc]" : s < step ? "bg-[#155dfc]" : "bg-slate-300 dark:bg-slate-700"
                   )}
                 />
               ))}
@@ -235,7 +238,7 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
                   {step === 1 && (
                     <div className="group bg-white/50 dark:bg-slate-900/40 p-6 rounded-4xl border border-slate-200/60 dark:border-white/5 hover:border-emerald-500/30 transition-all duration-300 shadow-sm hover:shadow-md">
                       <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl text-[#e05d38] dark:text-[#e05d38] group-hover:scale-110 transition-transform">
+                        <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl text-[#155dfc] dark:text-[#155dfc] group-hover:scale-110 transition-transform">
                           <User className="w-4 h-4" />
                         </div>
                         <h4 className="text-sm font-bold text-slate-900 dark:text-slate-200 uppercase tracking-widest">Personal Information</h4>
@@ -299,8 +302,14 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
                             <Input
                               id="phone"
                               value={formData.phone}
-                              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                              placeholder="+91-0000000000"
+                              onChange={(e) => {
+                                let val = e.target.value
+                                if (val.startsWith("+91") && val.length > 3 && val[3] !== " ") {
+                                  val = `+91 ${val.substring(3)}`
+                                }
+                                setFormData({ ...formData, phone: val })
+                              }}
+                              placeholder="+91 0000000000"
                               className={cn("h-12 rounded-2xl bg-white/50 dark:bg-slate-950/50 border-slate-200/60 dark:border-white/5 pl-10", errors.phone && "border-rose-500/50 bg-rose-50/10")}
                             />
                             <Smartphone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -378,13 +387,13 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
                                   return docSpec?.name?.toLowerCase() === formData.diagnosis.toLowerCase();
                                 })
                                 .map((d) => (
-                                <SelectItem key={d.id || d._id} value={d.name} className="rounded-xl">
-                                  <div className="flex items-center gap-2">
-                                    <Stethoscope className="w-3.5 h-3.5 text-slate-400" />
-                                    <span>{d.name}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
+                                  <SelectItem key={d.id || d._id} value={d.name} className="rounded-xl">
+                                    <div className="flex items-center gap-2">
+                                      <Stethoscope className="w-3.5 h-3.5 text-slate-400" />
+                                      <span>{d.name}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
                             </SelectContent>
                           </Select>
                           {errors.doctor && <p className="text-[10px] font-bold text-rose-500 uppercase tracking-tight flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.doctor}</p>}
@@ -479,7 +488,7 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
               {step < 3 ? (
                 <Button
                   onClick={handleNext}
-                  className="rounded-2xl h-12 px-8 font-extrabold bg-linear-to-r from-[#e05d38] to-[#e05d38] hover:from-[#e05d38] hover:to-[#e05d38] text-white shadow-[0_10px_20px_-10px_rgba(16,185,129,0.4)] hover:shadow-[0_15px_30px_-10px_rgba(16,185,129,0.5)] transition-all duration-300 flex items-center gap-2 min-w-[140px]"
+                  className="rounded-2xl h-12 px-8 font-extrabold bg-linear-to-r from-[#155dfc] to-[#155dfc] hover:from-[#155dfc] hover:to-[#155dfc] text-white shadow-[0_10px_20px_-10px_rgba(16,185,129,0.4)] hover:shadow-[0_15px_30px_-10px_rgba(16,185,129,0.5)] transition-all duration-300 flex items-center gap-2 min-w-[140px]"
                 >
                   <span>Next Step</span>
                   <ChevronRight className="w-4 h-4" />

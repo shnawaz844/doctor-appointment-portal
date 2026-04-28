@@ -143,7 +143,7 @@ export default function PrescriptionsPage() {
                 />
               </div>
               <CreatePrescriptionDialog onCreated={fetchPrescriptions}>
-                <Button className="w-full sm:w-auto h-11 rounded-xl px-6 bg-[#e05d38] text-white hover:bg-[#c94f2f] hover:scale-105 transition-transform">
+                <Button className="w-full sm:w-auto h-11 rounded-xl px-6 bg-[#155dfc] text-white hover:bg-[#2918e1] hover:scale-105 transition-transform">
                   <Pill className="h-4 w-4 mr-2" />
                   Create Prescription
                 </Button>
@@ -367,77 +367,77 @@ export default function PrescriptionsPage() {
                   )}
                 </div>
 
-                  {selectedPatient.instructions && (
-                    <div className="p-5 bg-blue-50/50 dark:bg-blue-500/5 rounded-2xl border border-blue-100 dark:border-blue-900/30">
-                      <div className="flex items-center gap-2 mb-2">
-                        <ClipboardList className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Instructions</p>
-                      </div>
-                      <p className="text-sm font-medium text-slate-600 dark:text-slate-300 italic leading-relaxed">
-                        "{selectedPatient.instructions}"
-                      </p>
+                {selectedPatient.instructions && (
+                  <div className="p-5 bg-blue-50/50 dark:bg-blue-500/5 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <ClipboardList className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Instructions</p>
                     </div>
-                  )}
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300 italic leading-relaxed">
+                      "{selectedPatient.instructions}"
+                    </p>
+                  </div>
+                )}
 
-                  {selectedPatient.attachment_url && (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          <FileImage className="h-3 w-3" />
-                          Prescription File
+                {selectedPatient.attachment_url && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <FileImage className="h-3 w-3" />
+                        Prescription File
+                      </div>
+                      <a
+                        href={selectedPatient.attachment_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] font-black text-blue-600 hover:underline uppercase tracking-widest flex items-center gap-1"
+                      >
+                        Full View <ExternalLink className="h-2 w-2" />
+                      </a>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 flex items-center justify-center p-2 min-h-[260px]">
+                      {selectedPatient.attachment_type?.startsWith("image/") ? (
+                        <img
+                          src={selectedPatient.attachment_url}
+                          alt="Prescription"
+                          className="max-w-full h-auto rounded-xl shadow-lg border border-slate-200 dark:border-slate-800"
+                        />
+                      ) : selectedPatient.attachment_type?.includes("pdf") ? (
+                        <div className="flex flex-col items-center gap-3 py-8 w-full">
+                          <div className="p-3 bg-rose-500/10 rounded-xl">
+                            <FileText className="w-8 h-8 text-rose-500" />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-sm font-bold text-slate-900 dark:text-white">PDF Prescription</p>
+                          </div>
+                          <a
+                            href={selectedPatient.attachment_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-6 py-2 bg-rose-500 text-white rounded-lg font-bold text-xs hover:bg-rose-600 transition-all shadow-md shadow-rose-500/20"
+                          >
+                            Open PDF
+                          </a>
                         </div>
-                        <a
-                          href={selectedPatient.attachment_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[10px] font-black text-blue-600 hover:underline uppercase tracking-widest flex items-center gap-1"
-                        >
-                          Full View <ExternalLink className="h-2 w-2" />
-                        </a>
-                      </div>
-
-                      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 flex items-center justify-center p-2 min-h-[260px]">
-                        {selectedPatient.attachment_type?.startsWith("image/") ? (
-                          <img
-                            src={selectedPatient.attachment_url}
-                            alt="Prescription"
-                            className="max-w-full h-auto rounded-xl shadow-lg border border-slate-200 dark:border-slate-800"
-                          />
-                        ) : selectedPatient.attachment_type?.includes("pdf") ? (
-                          <div className="flex flex-col items-center gap-3 py-8 w-full">
-                            <div className="p-3 bg-rose-500/10 rounded-xl">
-                              <FileText className="w-8 h-8 text-rose-500" />
-                            </div>
-                            <div className="text-center">
-                              <p className="text-sm font-bold text-slate-900 dark:text-white">PDF Prescription</p>
-                            </div>
-                            <a
-                              href={selectedPatient.attachment_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="px-6 py-2 bg-rose-500 text-white rounded-lg font-bold text-xs hover:bg-rose-600 transition-all shadow-md shadow-rose-500/20"
-                            >
-                              Open PDF
-                            </a>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center gap-2 py-6">
-                            <FileText className="h-6 w-6 text-slate-400" />
-                            <a
-                              href={selectedPatient.attachment_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs font-bold text-blue-600 hover:underline"
-                            >
-                              View Clinical Attachment
-                            </a>
-                          </div>
-                        )}
-                      </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 py-6">
+                          <FileText className="h-6 w-6 text-slate-400" />
+                          <a
+                            href={selectedPatient.attachment_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-bold text-blue-600 hover:underline"
+                          >
+                            View Clinical Attachment
+                          </a>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </CardContent>
+                  </div>
+                )}
+              </div>
+            </CardContent>
 
             <div className="p-8 bg-slate-50 dark:bg-slate-950/50 flex flex-col sm:flex-row gap-3 border-t border-slate-100 dark:border-slate-800">
               <Button variant="outline" onClick={() => setSelectedPatient(null)} className="flex-1 h-12 rounded-xl font-bold text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-900">

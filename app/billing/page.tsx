@@ -37,7 +37,7 @@ export default function BillingPage() {
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined)
   const [serviceFilter, setServiceFilter] = useState<string>("all")
   const [methodFilter, setMethodFilter] = useState<string>("all")
-  
+
   const [selectedStat, setSelectedStat] = useState<"revenue" | "outstanding" | "invoices" | null>(null)
   const [invoices, setInvoices] = useState<BillingRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -129,20 +129,20 @@ export default function BillingPage() {
               <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Billing & Invoices</h1>
               <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Manage hospital revenue and patient billing</p>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <div className="flex p-1 bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-slate-800">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className={cn("rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all", activeTab === "today" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-lg" : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-700/50")}
                   onClick={() => setActiveTab("today")}
                 >
                   Today
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className={cn("rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all", activeTab === "all" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-lg" : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-700/50")}
                   onClick={() => setActiveTab("all")}
                 >
@@ -151,7 +151,7 @@ export default function BillingPage() {
               </div>
 
               <CreateInvoiceDialog onCreated={fetchInvoices}>
-                <Button className="h-11 rounded-xl px-6 bg-[#e05d38] text-white hover:bg-[#c94f2f] hover:scale-105 transition-all shadow-lg shadow-[#e05d38]/20 font-bold uppercase tracking-wider text-xs">
+                <Button className="h-11 rounded-xl px-6 bg-[#155dfc] text-white hover:bg-[#2918e1] hover:scale-105 transition-all shadow-lg shadow-[#155dfc]/20 font-bold uppercase tracking-wider text-xs">
                   <Plus className="h-4 w-4 mr-2" />
                   Create Invoice
                 </Button>
@@ -359,10 +359,10 @@ export default function BillingPage() {
                 {activeTab === "all" && (
                   <>
                     <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-2" />
-                    
+
                     {/* Month Filter */}
                     <div className="flex items-center gap-2">
-                       <Select value={monthFilter} onValueChange={setMonthFilter}>
+                      <Select value={monthFilter} onValueChange={setMonthFilter}>
                         <SelectTrigger className="h-9 min-w-[110px] bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold shadow-sm">
                           <div className="flex items-center gap-2">
                             <CalendarIcon className="h-3 w-3 text-slate-400" />
@@ -424,9 +424,9 @@ export default function BillingPage() {
 
                 {/* Reset All (If any filter is active) */}
                 {(serviceFilter !== "all" || methodFilter !== "all" || monthFilter !== "all" || yearFilter !== "all" || dateFilter) && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="ml-auto text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 px-4 rounded-xl"
                     onClick={() => {
                       setServiceFilter("all")

@@ -95,7 +95,7 @@ export default function SignupPage() {
             const data = await res.json()
 
             if (res.ok) {
-                router.push("/login")
+                router.push("/settings")
             } else {
                 setError(data.error || "Signup failed")
             }

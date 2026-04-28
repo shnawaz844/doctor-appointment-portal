@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Search, ChevronLeft, ChevronRight, Loader2, Calendar, RotateCcw, ClipboardList } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { formatPhoneWithPrefix } from "@/lib/phone"
 
 export default function OPDListPage() {
   const router = useRouter()
@@ -107,8 +108,7 @@ export default function OPDListPage() {
     const matchesSearch =
       (opd.patient_name && opd.patient_name.toLowerCase().includes(term)) ||
       (opd.mobile_no && opd.mobile_no.includes(term)) ||
-      (opd.opd_no && opd.opd_no.toLowerCase().includes(term)) ||
-      (opd.uhid_no && opd.uhid_no.toLowerCase().includes(term))
+      (opd.opd_no && opd.opd_no.toLowerCase().includes(term))
     if (!matchesSearch) return false
 
     const opdDate = parseOpdDate(opd.date)
@@ -190,7 +190,7 @@ export default function OPDListPage() {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder={user?.role === "DOCTOR" ? "Search name, mobile, OPD..." : "Search name, mobile, OPD, UHID..."}
+                  placeholder={user?.role === "DOCTOR" ? "Search name, mobile, OPD..." : "Search name, mobile, OPD..."}
                   className="pl-10 h-10 sm:h-11 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl font-medium"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -288,10 +288,7 @@ export default function OPDListPage() {
                         <TableHead className="w-10">S.no</TableHead>
                         <TableHead>OPD No</TableHead>
                         {user?.role !== "DOCTOR" && (
-                          <>
-                            <TableHead>UHID</TableHead>
-                            <TableHead>Token No</TableHead>
-                          </>
+                          <TableHead>Token No</TableHead>
                         )}
                         <TableHead>Patient Name</TableHead>
                         <TableHead>Age/Sex</TableHead>
@@ -313,15 +310,12 @@ export default function OPDListPage() {
                               <TableCell className="font-mono text-[11px] text-muted-foreground">{startIndex + index + 1}</TableCell>
                               <TableCell className="font-mono text-sm font-medium">{opd.opd_no}</TableCell>
                               {user?.role !== "DOCTOR" && (
-                                <>
-                                  <TableCell className="font-mono text-sm">{opd.uhid_no}</TableCell>
-                                  <TableCell>{opd.token_no}</TableCell>
-                                </>
+                                <TableCell>{opd.token_no}</TableCell>
                               )}
                               <TableCell className="font-medium">{opd.patient_name}</TableCell>
                               <TableCell className="text-muted-foreground">{opd.age_sex}</TableCell>
                               <TableCell className="text-muted-foreground font-medium">
-                                {opd.mobile_no}
+                                {formatPhoneWithPrefix(opd.mobile_no)}
                               </TableCell>
                               <TableCell>
                                 <div className="flex flex-col">
@@ -360,7 +354,7 @@ export default function OPDListPage() {
                         })
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={user?.role === "DOCTOR" ? 9 : 10} className="text-center text-muted-foreground py-8">
+                          <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                             No OPD registrations found matching your criteria
                           </TableCell>
                         </TableRow>

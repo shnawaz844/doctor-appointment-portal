@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, UserPlus, ImagePlus, X, Eye, EyeOff, Trash2, Pencil } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { resolveImageUrl } from "@/lib/image-url"
+import { formatPhoneWithPrefix } from "@/lib/phone"
 
 export default function DoctorsPage() {
     const [doctors, setDoctors] = useState<any[]>([])
@@ -272,8 +273,14 @@ export default function DoctorsPage() {
                                         <Input
                                             id="phone"
                                             value={formData.phone}
-                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                            placeholder="Phone number"
+                                            onChange={(e) => {
+                                                let val = e.target.value
+                                                if (val.startsWith("+91") && val.length > 3 && val[3] !== " ") {
+                                                    val = `+91 ${val.substring(3)}`
+                                                }
+                                                setFormData({ ...formData, phone: val })
+                                            }}
+                                            placeholder="+91 0000000000"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -440,7 +447,7 @@ export default function DoctorsPage() {
                                                         <div>
                                                             <p className="font-medium">{d.name}</p>
                                                             <p className="text-xs text-primary font-semibold">{getspecialtyName(d.specialty_id)}</p>
-                                                            <p className="text-xs text-muted-foreground">{d.email || d.phone || "No contact info"}</p>
+                                                            <p className="text-xs text-muted-foreground">{d.email || (d.phone ? formatPhoneWithPrefix(d.phone) : null) || "No contact info"}</p>
                                                             {(d.fee || d.emergency_fee) && (
                                                                 <div className="flex gap-2 mt-1">
                                                                     {d.fee > 0 && <span className="text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Fee: ₹{d.fee}</span>}

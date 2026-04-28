@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, ShieldCheck, UserCog, Key, Plus } from "lucide-react"
+import { Loader2, ShieldCheck, UserCog, Key, Plus, Trash2, Pencil } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Link from "next/link"
 
 export default function SettingsPage() {
@@ -26,6 +28,15 @@ export default function SettingsPage() {
 
   const [users, setUsers] = useState<any[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
+
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<any>(null)
+  const [editFormData, setEditFormData] = useState({
+    name: "",
+    email: "",
+    role: ""
+  })
+  const [editLoading, setEditLoading] = useState(false)
 
   useEffect(() => {
     async function fetchUser() {
@@ -83,6 +94,65 @@ export default function SettingsPage() {
       alert("An unexpected error occurred")
     }
   }
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) return
+
+    try {
+      const res = await fetch(`/api/auth/admin/users?userId=${userId}`, {
+        method: "DELETE",
+      })
+
+      if (res.ok) {
+        alert("User deleted successfully")
+        fetchUsers()
+      } else {
+        const data = await res.json()
+        alert(data.error || "Failed to delete user")
+      }
+    } catch (error) {
+      alert("An unexpected error occurred")
+    }
+  }
+
+  const handleEditClick = (u: any) => {
+    setEditingUser(u)
+    setEditFormData({
+      name: u.name,
+      email: u.email,
+      role: u.role
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setEditLoading(true)
+
+    try {
+      const res = await fetch("/api/auth/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: editingUser.id,
+          ...editFormData
+        }),
+      })
+
+      if (res.ok) {
+        setIsEditDialogOpen(false)
+        fetchUsers()
+      } else {
+        const data = await res.json()
+        alert(data.error || "Failed to update user")
+      }
+    } catch (error) {
+      alert("An unexpected error occurred")
+    } finally {
+      setEditLoading(false)
+    }
+  }
+
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -204,7 +274,7 @@ export default function SettingsPage() {
                   <div className="space-y-4">
                     <div className="grid gap-4">
                       {users.filter(u => u.email !== user.email).map((u) => (
-                        <div key={u._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-white/40 dark:bg-slate-900/40 border border-white/20 dark:border-slate-800 gap-4">
+                        <div key={u.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-white/40 dark:bg-slate-900/40 border border-white/20 dark:border-slate-800 gap-4">
                           <div>
                             <p className="font-bold text-foreground">{u.name}</p>
                             <p className="text-xs text-muted-foreground">{u.email}</p>
@@ -215,15 +285,35 @@ export default function SettingsPage() {
                               </span>
                             </div>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleAdminResetPassword(u._id)}
-                            className="w-full sm:w-auto text-xs font-bold border-primary/20 hover:bg-primary/10 transition-all gap-2"
-                          >
-                            <Key className="h-3 w-3" />
-                            Reset Password
-                          </Button>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditClick(u)}
+                              className="w-full sm:w-auto text-xs font-bold border-primary/20 hover:bg-primary/10 transition-all gap-2"
+                            >
+                              <Pencil className="h-3 w-3" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleAdminResetPassword(u.id)}
+                              className="w-full sm:w-auto text-xs font-bold border-primary/20 hover:bg-primary/10 transition-all gap-2"
+                            >
+                              <Key className="h-3 w-3" />
+                              Reset Password
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteUser(u.id)}
+                              className="w-full sm:w-auto text-xs font-bold border-destructive/20 hover:bg-destructive/10 transition-all gap-2"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              Delete
+                            </Button>
+                          </div>
                         </div>
 
                       ))}
@@ -355,6 +445,61 @@ export default function SettingsPage() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="glass-premium border-none shadow-2xl sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black">Edit User Details</DialogTitle>
+            <DialogDescription>Update name, email, and role for this staff member.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateUser} className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Full Name</Label>
+              <Input
+                id="edit-name"
+                value={editFormData.name}
+                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                required
+                className="bg-white/50 dark:bg-slate-900/50 border-white/20 dark:border-slate-800"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email Address</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editFormData.email}
+                onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                required
+                className="bg-white/50 dark:bg-slate-900/50 border-white/20 dark:border-slate-800"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-role">Role</Label>
+              <Select
+                value={editFormData.role}
+                onValueChange={(val) => setEditFormData({ ...editFormData, role: val })}
+              >
+                <SelectTrigger className="bg-white/50 dark:bg-slate-900/50 border-white/20 dark:border-slate-800">
+                  <SelectValue placeholder="Select Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ADMIN">Administrator</SelectItem>
+                  <SelectItem value="DOCTOR">Doctor</SelectItem>
+                  <SelectItem value="STAFF">Staff Member</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="ghost" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={editLoading} className="shadow-lg shadow-primary/20">
+                {editLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </main>
   )
 }

@@ -208,7 +208,7 @@ export function CreateMedicalRecordDialog({ children, onCreated, preselectedPati
                     <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl -mr-16 -mt-16 rounded-full" />
                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500/10 blur-3xl -ml-12 -mb-12 rounded-full" />
                     <div className="flex items-center gap-4 relative">
-                        <div className="p-3 bg-[#e05d38] rounded-2xl shadow-lg shadow-blue-500/20 text-white">
+                        <div className="p-3 bg-[#155dfc] rounded-2xl shadow-lg shadow-blue-500/20 text-white">
                             <ClipboardList className="w-6 h-6" />
                         </div>
                         <div>
@@ -335,7 +335,7 @@ export function CreateMedicalRecordDialog({ children, onCreated, preselectedPati
                                             value={summary}
                                             onChange={(e) => setSummary(e.target.value)}
                                             placeholder="Describe the patient condition, findings, and treatment plan..."
-                                            className="min-h-[160px] rounded-3xl bg-white/50 dark:bg-slate-950/50 border-slate-200/60 dark:border-white/5 focus:ring-[#e05d38]/20 focus:border-[#e05d38]/50 transition-all p-4 resize-none"
+                                            className="min-h-[160px] rounded-3xl bg-white/50 dark:bg-slate-950/50 border-slate-200/60 dark:border-white/5 focus:ring-[#155dfc]/20 focus:border-[#155dfc]/50 transition-all p-4 resize-none"
                                         />
                                     </div>
 
@@ -347,10 +347,10 @@ export function CreateMedicalRecordDialog({ children, onCreated, preselectedPati
                                                 type="file"
                                                 accept="image/*,.pdf"
                                                 onChange={handleFileChange}
-                                                className="h-14 rounded-2xl bg-white/50 dark:bg-slate-950/50 border-slate-200/60 dark:border-white/5 cursor-pointer file:cursor-pointer p-[0.4rem] file:h-full file:border-0 file:bg-[#e05d38]/10 file:text-[#e05d38] file:rounded-xl file:px-4 file:mr-3 transition-all"
+                                                className="h-14 rounded-2xl bg-white/50 dark:bg-slate-950/50 border-slate-200/60 dark:border-white/5 cursor-pointer file:cursor-pointer p-[0.4rem] file:h-full file:border-0 file:bg-[#155dfc]/10 file:text-[#155dfc] file:rounded-xl file:px-4 file:mr-3 transition-all"
                                             />
                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-30 group-hover/upload:opacity-100 transition-opacity pointer-events-none">
-                                                <Upload className="w-5 h-5 text-[#e05d38]" />
+                                                <Upload className="w-5 h-5 text-[#155dfc]" />
                                             </div>
                                         </div>
 
@@ -406,7 +406,7 @@ export function CreateMedicalRecordDialog({ children, onCreated, preselectedPati
                             <Button
                                 onClick={handleSubmit}
                                 disabled={loading || !selectedPatientId || !recordType || (currentUser?.role !== "DOCTOR" && !selectedDoctorName) || (!summary && !selectedFile)}
-                                className="rounded-2xl h-12 px-8 font-extrabold bg-linear-to-r from-[#e05d38] to-[#e05d38] hover:from-[#e05d38] hover:to-[#e05d38] text-white shadow-[0_10px_20px_-10px_rgba(224,93,56,0.4)] hover:shadow-[0_15px_30px_-10px_rgba(224,93,56,0.5)] transition-all duration-300 flex items-center gap-2 min-w-[180px]"
+                                className="rounded-2xl h-12 px-8 font-extrabold bg-linear-to-r from-[#155dfc] to-[#155dfc] hover:from-[#155dfc] hover:to-[#155dfc] text-white shadow-[0_10px_20px_-10px_rgba(224,93,56,0.4)] hover:shadow-[0_15px_30px_-10px_rgba(224,93,56,0.5)] transition-all duration-300 flex items-center gap-2 min-w-[180px]"
                             >
                                 {loading ? (
                                     <div className="flex items-center gap-2">

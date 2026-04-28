@@ -158,9 +158,9 @@ const normalizeSpecialty = (name?: string): string => {
     if (lowerName.includes("gastro")) return "Gastroenterology"
     if (lowerName.includes("pulmo")) return "Pulmonology"
     if (lowerName.includes("uro")) return "Urology"
-    
+
     // Exact match search in keys
-    const foundKey = Object.keys(SPECIALTY_BODY_PARTS).find(k => 
+    const foundKey = Object.keys(SPECIALTY_BODY_PARTS).find(k =>
         k.toLowerCase() === lowerName || lowerName.includes(k.toLowerCase())
     )
     return foundKey || "General"
@@ -248,8 +248,8 @@ export function CreateImagingDialog({
                         // Always prioritize current doctor if they are adding a study
                         setDoctor(foundDoc.name)
                     } else if (user.role === "DOCTOR") {
-                         // Fallback to user name if doc not found in list but role is DOCTOR
-                         setDoctor(user.name)
+                        // Fallback to user name if doc not found in list but role is DOCTOR
+                        setDoctor(user.name)
                     } else {
                         // If not a doctor, use patient's doctor or current selection if valid
                         const pId = preselectedPatientId || patientId
@@ -373,7 +373,7 @@ export function CreateImagingDialog({
                     <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-3xl -mr-16 -mt-16 rounded-full" />
                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-500/10 blur-3xl -ml-12 -mb-12 rounded-full" />
                     <div className="flex items-center gap-4 relative">
-                        <div className="p-3 bg-[#e05d38] rounded-2xl shadow-lg shadow-purple-500/20 text-white">
+                        <div className="p-3 bg-[#155dfc] rounded-2xl shadow-lg shadow-purple-500/20 text-white">
                             <Scan className="w-6 h-6" />
                         </div>
                         <div>
@@ -496,8 +496,8 @@ export function CreateImagingDialog({
                                                     <SelectContent className="rounded-2xl backdrop-blur-xl">
                                                         {(bodyPart === "Other"
                                                             ? ALL_MODALITIES
-                                                            : (bodyPart && BODY_PART_MODALITIES[bodyPart] 
-                                                                ? BODY_PART_MODALITIES[bodyPart] 
+                                                            : (bodyPart && BODY_PART_MODALITIES[bodyPart]
+                                                                ? BODY_PART_MODALITIES[bodyPart]
                                                                 : (SPECIALTY_MODALITIES[currentSpecialty] || DEFAULT_MODALITIES))
                                                         ).map((m) => (
                                                             <SelectItem key={m} value={m} className="rounded-xl">{MODALITY_DISPLAY_NAMES[m] || m}</SelectItem>
@@ -630,7 +630,7 @@ export function CreateImagingDialog({
                             <Button
                                 onClick={handleSubmit}
                                 disabled={loading || !patientName || !patientId || !studyType || !bodyPart || !modality || !doctor}
-                                className="rounded-2xl h-12 px-8 font-extrabold bg-linear-to-r from-[#e05d38] to-[#e05d38] hover:from-[#e05d38] hover:to-[#e05d38] text-white shadow-[0_10px_20px_-10px_rgba(147,51,234,0.4)] hover:shadow-[0_15px_30px_-10px_rgba(147,51,234,0.5)] transition-all duration-300 flex items-center gap-2 min-w-[200px]"
+                                className="rounded-2xl h-12 px-8 font-extrabold bg-linear-to-r from-[#155dfc] to-[#155dfc] hover:from-[#155dfc] hover:to-[#155dfc] text-white shadow-[0_10px_20px_-10px_rgba(147,51,234,0.4)] hover:shadow-[0_15px_30px_-10px_rgba(147,51,234,0.5)] transition-all duration-300 flex items-center gap-2 min-w-[200px]"
                             >
                                 {loading ? (
                                     <div className="flex items-center gap-2">

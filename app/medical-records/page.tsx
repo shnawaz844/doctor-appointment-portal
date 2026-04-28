@@ -197,7 +197,7 @@ export default function MedicalRecordsPage() {
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Chronological overview of patient documentation</p>
             </div>
             <CreateMedicalRecordDialog onCreated={fetchRecords}>
-              <Button className="w-full sm:w-auto h-11 rounded-xl px-6 bg-[#e05d38] text-white hover:bg-[#c94f2f] hover:scale-105 transition-transform">
+              <Button className="w-full sm:w-auto h-11 rounded-xl px-6 bg-[#155dfc] text-white hover:bg-[#2918e1] hover:scale-105 transition-transform">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Record
               </Button>
@@ -270,7 +270,7 @@ export default function MedicalRecordsPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-9 w-9 text-[#e05d38]/70 hover:bg-[#e05d38]/10 hover:text-[#e05d38] rounded-xl"
+                              className="h-9 w-9 text-[#155dfc]/70 hover:bg-[#155dfc]/10 hover:text-[#155dfc] rounded-xl"
                               onClick={(e) => { e.stopPropagation(); window.open(record.attachment_url, '_blank'); }}
                               title="View Attachment"
                             >
@@ -412,7 +412,7 @@ export default function MedicalRecordsPage() {
                       href={selectedRecord.attachment_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[10px] font-black text-[#e05d38] hover:underline uppercase tracking-widest"
+                      className="text-[10px] font-black text-[#155dfc] hover:underline uppercase tracking-widest"
                     >
                       Open Full View
                     </a>
