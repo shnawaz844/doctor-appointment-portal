@@ -42,9 +42,10 @@ export default function BillingPage() {
   const [invoices, setInvoices] = useState<BillingRecord[]>([])
   const [loading, setLoading] = useState(true)
 
-  async function fetchInvoices() {
+  async function fetchInvoices(isTodayOnly?: boolean) {
     try {
-      const res = await fetch("/api/invoices", {
+      const url = isTodayOnly ? "/api/invoices?today=true" : "/api/invoices"
+      const res = await fetch(url, {
         headers: {
           "organization-id": "default-org"
         }
@@ -60,7 +61,7 @@ export default function BillingPage() {
   }
 
   useEffect(() => {
-    fetchInvoices()
+    fetchInvoices(activeTab === "today")
   }, [])
 
   // ── Derived Data ──
@@ -73,7 +74,7 @@ export default function BillingPage() {
     if (activeTab === "today") {
       if (!isTodayRecord) return false;
     } else {
-      if (isTodayRecord) return false;
+      // Include all records in history tab
       if (monthFilter !== "all" && format(d, "MMM") !== monthFilter) return false;
       if (yearFilter !== "all" && format(d, "yyyy") !== yearFilter) return false;
       if (dateFilter && format(d, "yyyy-MM-dd") !== format(dateFilter, "yyyy-MM-dd")) return false;
@@ -136,7 +137,7 @@ export default function BillingPage() {
                   variant="ghost"
                   size="sm"
                   className={cn("rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all", activeTab === "today" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-lg" : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-700/50")}
-                  onClick={() => setActiveTab("today")}
+                  onClick={() => { setActiveTab("today"); fetchInvoices(true); }}
                 >
                   Today
                 </Button>
@@ -144,13 +145,13 @@ export default function BillingPage() {
                   variant="ghost"
                   size="sm"
                   className={cn("rounded-xl px-4 font-bold text-xs uppercase tracking-widest transition-all", activeTab === "all" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-lg" : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-700/50")}
-                  onClick={() => setActiveTab("all")}
+                  onClick={() => { setActiveTab("all"); fetchInvoices(false); }}
                 >
                   All History
                 </Button>
               </div>
 
-              <CreateInvoiceDialog onCreated={fetchInvoices}>
+              <CreateInvoiceDialog onCreated={() => fetchInvoices(activeTab === "today")}>
                 <Button className="h-11 rounded-xl px-6 bg-[#155dfc] text-white hover:bg-[#2918e1] hover:scale-105 transition-all shadow-lg shadow-[#155dfc]/20 font-bold uppercase tracking-wider text-xs">
                   <Plus className="h-4 w-4 mr-2" />
                   Create Invoice
@@ -190,7 +191,7 @@ export default function BillingPage() {
 
         <div className="grid gap-8 lg:grid-cols-3 mb-10">
           <div className="lg:col-span-2">
-            <div className="glass-premium rounded-3xl p-4 md:p-8 hover:shadow-2xl transition-all animate-in fade-in slide-in-from-bottom-6 duration-1000">
+            <div className="glass-premium rounded-3xl p-4 md:p-6 hover:shadow-2xl transition-all animate-in fade-in slide-in-from-bottom-6 duration-1000 h-full flex flex-col">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
                 <div>
                   <h3 className="text-xl font-black text-slate-900 dark:text-white">Billing Trends</h3>
@@ -201,7 +202,7 @@ export default function BillingPage() {
                 </div>
               </div>
 
-              <div className="h-[350px]">
+              <div className="flex-1 min-h-[250px]">
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
@@ -230,12 +231,12 @@ export default function BillingPage() {
             </div>
           </div>
 
-          <Card className="border-none glass-premium rounded-3xl animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-150">
+          <Card className="border-none glass-premium rounded-3xl animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-150 h-full flex flex-col">
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-black text-slate-900 dark:text-white">Revenue Breakdown</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-[300px] relative">
+            <CardContent className="flex-1 flex flex-col justify-between">
+              <div className="h-[200px] relative">
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader2 className="h-10 w-10 animate-spin text-emerald-500" />
@@ -270,7 +271,7 @@ export default function BillingPage() {
                   </>
                 )}
               </div>
-              <div className="mt-6 space-y-3">
+              <div className="mt-4 space-y-2">
                 {revenueBreakdown.map((item, idx) => (
                   <div key={item.name} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
                     <div className="flex items-center gap-3">
@@ -287,7 +288,7 @@ export default function BillingPage() {
 
         {/* Billing Records Table & Tabs */}
         <div className="glass-premium rounded-3xl p-4 md:p-8 hover:shadow-2xl transition-all animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-300">
-          <Tabs defaultValue="today" className="w-full" onValueChange={setActiveTab}>
+          <Tabs defaultValue="today" className="w-full" onValueChange={(val) => { setActiveTab(val); fetchInvoices(val === "today"); }}>
             <div className="flex flex-col gap-8 mb-10">
               {/* Row 1: Title, Tabs, and Create Button */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -303,8 +304,8 @@ export default function BillingPage() {
                   </TabsList>
                 </div>
 
-                <CreateInvoiceDialog onCreated={fetchInvoices}>
-                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-8 h-12 shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95 font-bold">
+                <CreateInvoiceDialog onCreated={() => fetchInvoices(activeTab === "today")}>
+                  <Button className="bg-[#155dfc] hover:bg-[#3a49d6] text-white rounded-xl px-8 h-12 shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95 font-bold">
                     <Plus className="h-5 w-5 mr-2" />
                     Create Invoice
                   </Button>

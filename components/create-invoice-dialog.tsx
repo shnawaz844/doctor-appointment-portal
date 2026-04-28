@@ -7,7 +7,21 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2 } from "lucide-react"
+import { Loader2, Check, ChevronsUpDown, User, PlusCircle, Search } from "lucide-react"
+import { cn } from "@/lib/utils"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 interface Patient {
   _id: string
@@ -28,6 +42,11 @@ export function CreateInvoiceDialog({ children }: any) {
   const [patients, setPatients] = useState<Patient[]>([])
   const [loadingPatients, setLoadingPatients] = useState(false)
   const [patientsError, setPatientsError] = useState("")
+
+  const [isManualEntry, setIsManualEntry] = useState(false)
+  const [manualPatientName, setManualPatientName] = useState("")
+  const [manualPatientPhone, setManualPatientPhone] = useState("")
+  const [comboOpen, setComboOpen] = useState(false)
 
   // Fetch patients whenever the dialog opens
   useEffect(() => {
@@ -52,26 +71,27 @@ export function CreateInvoiceDialog({ children }: any) {
   const [submitting, setSubmitting] = useState(false)
 
   const handleSubmit = async () => {
-    if (!patientId || !invoiceType || !amount) {
+    if ((!isManualEntry && !patientId) || (isManualEntry && !manualPatientName) || !invoiceType || !amount) {
       alert("Please fill in all required fields.")
       return
     }
 
     setSubmitting(true)
     try {
-      const selectedPatient = patients.find(p => p.id === patientId)
+      const selectedPatient = !isManualEntry ? patients.find(p => p.id === patientId) : null
       const res = await fetch("/api/invoices", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "organization-id": "default-org", // Assuming default for now, should come from context/auth
+          "organization-id": "default-org",
         },
         body: JSON.stringify({
-          patientId,
-          patientName: selectedPatient?.name || "Unknown",
+          patientId: isManualEntry ? "WALK-IN" : patientId,
+          patientName: isManualEntry ? manualPatientName : (selectedPatient?.name || "Unknown"),
+          patientPhone: isManualEntry ? manualPatientPhone : undefined,
           service: invoiceType,
           amount: parseFloat(amount),
-          notes,
+          notes: isManualEntry && manualPatientPhone ? `Contact: ${manualPatientPhone}\n${notes}` : notes,
           status,
           paymentMethod,
         }),
@@ -80,7 +100,8 @@ export function CreateInvoiceDialog({ children }: any) {
       if (!res.ok) throw new Error("Failed to create invoice")
 
       setOpen(false)
-      setPatientId("")
+      setManualPatientName("")
+      setManualPatientPhone("")
       setInvoiceType("")
       setAmount("")
       setDescription("")
@@ -108,35 +129,124 @@ export function CreateInvoiceDialog({ children }: any) {
         <div className="space-y-6 p-8">
           <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-4">
             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Billing Details</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="patientId" className="text-xs font-bold text-slate-700 dark:text-slate-300">Patient / OPD NO *</Label>
-                <Select value={patientId} onValueChange={setPatientId} disabled={loadingPatients}>
-                  <SelectTrigger id="patientId" className="w-full h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
-                    {loadingPatients ? (
-                      <span className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Loading patients…
-                      </span>
-                    ) : (
-                      <SelectValue placeholder="Select patient" />
-                    )}
-                  </SelectTrigger>
-                  <SelectContent>
-                    {patientsError ? (
-                      <div className="px-3 py-2 text-sm text-destructive">{patientsError}</div>
-                    ) : patients.length === 0 && !loadingPatients ? (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">No patients found</div>
-                    ) : (
-                      patients.map((patient) => (
-                        <SelectItem key={patient._id} value={patient.id}>
-                          {patient.id} - {patient.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl w-full">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsManualEntry(false)}
+                  className={cn(
+                    "flex-1 h-9 rounded-lg font-bold text-[10px] uppercase tracking-widest transition-all",
+                    !isManualEntry ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" : "text-slate-400"
+                  )}
+                >
+                  <User className="h-3 w-3 mr-2" />
+                  Registered Patient
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsManualEntry(true)}
+                  className={cn(
+                    "flex-1 h-9 rounded-lg font-bold text-[10px] uppercase tracking-widest transition-all",
+                    isManualEntry ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white" : "text-slate-400"
+                  )}
+                >
+                  <PlusCircle className="h-3 w-3 mr-2" />
+                  Walk-in / New
+                </Button>
               </div>
+
+              {!isManualEntry ? (
+                <div className="space-y-2">
+                  <Label htmlFor="patientId" className="text-xs font-bold text-slate-700 dark:text-slate-300">Search Patient Name *</Label>
+                  <Popover open={comboOpen} onOpenChange={setComboOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={comboOpen}
+                        className="w-full h-11 justify-between rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 font-normal hover:bg-white dark:hover:bg-slate-950"
+                        disabled={loadingPatients}
+                      >
+                        {loadingPatients ? (
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Loading patients...
+                          </span>
+                        ) : patientId ? (
+                          <span className="font-bold text-slate-900 dark:text-white">
+                            {patients.find((p) => p.id === patientId)?.name} ({patientId})
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">Search by patient name...</span>
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-2xl border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden z-[10001]" align="start">
+                      <Command className="bg-white dark:bg-slate-950">
+                        <CommandInput placeholder="Type name to search..." className="h-11 focus:ring-0 border-none" />
+                        <CommandList className="max-h-[300px]">
+                          <CommandEmpty className="py-6 text-center text-sm text-slate-500">
+                            No patient found.
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {patients.map((patient) => (
+                              <CommandItem
+                                key={patient.id}
+                                value={`${patient.name} ${patient.id}`}
+                                onSelect={() => {
+                                  setPatientId(patient.id)
+                                  setComboOpen(false)
+                                }}
+                                className="flex items-center justify-between py-3 px-4 aria-selected:bg-blue-50 dark:aria-selected:bg-blue-900/20 cursor-pointer"
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-black text-sm text-slate-900 dark:text-white">{patient.name}</span>
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">OPD ID: {patient.id}</span>
+                                </div>
+                                <Check
+                                  className={cn(
+                                    "h-4 w-4 text-blue-600",
+                                    patientId === patient.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="space-y-2">
+                    <Label htmlFor="manualName" className="text-xs font-bold text-slate-700 dark:text-slate-300">Patient Name *</Label>
+                    <Input
+                      id="manualName"
+                      value={manualPatientName}
+                      onChange={(e) => setManualPatientName(e.target.value)}
+                      placeholder="Full name"
+                      className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="manualPhone" className="text-xs font-bold text-slate-700 dark:text-slate-300">Contact Number</Label>
+                    <Input
+                      id="manualPhone"
+                      value={manualPatientPhone}
+                      onChange={(e) => setManualPatientPhone(e.target.value)}
+                      placeholder="Phone no."
+                      className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="invoiceType" className="text-xs font-bold text-slate-700 dark:text-slate-300">Invoice Type *</Label>
                 <Select value={invoiceType} onValueChange={setInvoiceType}>

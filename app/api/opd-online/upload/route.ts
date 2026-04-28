@@ -33,6 +33,15 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "No file provided" }, { status: 400 })
         }
 
+        // Vercel limit is 4.5MB, check slightly below that to be safe
+        const MAX_SIZE = 4.5 * 1024 * 1024
+        if (file.size > MAX_SIZE) {
+            return NextResponse.json({ 
+                error: "File too large", 
+                details: `File size is ${(file.size / 1024 / 1024).toFixed(2)}MB. Maximum allowed is 4.5MB.` 
+            }, { status: 413 })
+        }
+
         const bytes = await file.arrayBuffer()
         const buffer = Buffer.from(bytes)
 

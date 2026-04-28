@@ -218,6 +218,8 @@ export default function AppointmentsPage() {
 
     if (activeTab === "online" && (!isOnline || a.date !== today)) match = false
     if (activeTab === "allOnline" && !isOnline) match = false
+    if (activeTab === "scheduled" && (a.status !== "Scheduled" && a.status !== "Confirmed")) match = false
+    if (activeTab === "completed" && a.status !== "Completed") match = false
 
     if (filterDate && a.date !== filterDate) match = false
 
@@ -319,7 +321,7 @@ export default function AppointmentsPage() {
         )}
 
         {/* Appointment Stats */}
-        <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-8 md:mb-10">
+        <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 mb-8 md:mb-10">
           <StatCard
             label="Total Appointments"
             value={stats.totalToday}
@@ -364,6 +366,12 @@ export default function AppointmentsPage() {
             subLabel="All Upcoming"
             colorScheme="violet"
             loading={loading}
+            onClick={() => {
+              changeTab("scheduled")
+              setFilterDate("")
+              setFilterMonth("all")
+              setFilterYear("all")
+            }}
           />
           <StatCard
             label="Completed"
@@ -372,6 +380,12 @@ export default function AppointmentsPage() {
             subLabel="All Completed"
             colorScheme="cyan"
             loading={loading}
+            onClick={() => {
+              changeTab("completed")
+              setFilterDate("")
+              setFilterMonth("all")
+              setFilterYear("all")
+            }}
           />
         </div>
 
@@ -688,13 +702,13 @@ export default function AppointmentsPage() {
                           <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12 w-10">S.no</TableHead>
                           <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Patient Name</TableHead>
                           <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">APPOINTMENT ID</TableHead>
-                          {activeTab !== "today" && activeTab !== "online" && (
+                          {activeTab !== "today" && activeTab !== "online" && activeTab !== "scheduled" && activeTab !== "completed" && (
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Date</TableHead>
                           )}
                           <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12 text-center">Time</TableHead>
                           <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Doctor</TableHead>
                           <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Specialty</TableHead>
-                          {activeTab !== "online" && activeTab !== "allOnline" && (
+                          {activeTab !== "online" && activeTab !== "allOnline" && activeTab !== "scheduled" && activeTab !== "completed" && (
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Visit Type</TableHead>
                           )}
                           <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Status</TableHead>
@@ -755,7 +769,7 @@ export default function AppointmentsPage() {
                               <TableCell className="font-mono text-[11px] text-slate-500 py-4">
                                 {apt.id}
                               </TableCell>
-                              {activeTab !== "today" && activeTab !== "online" && (
+                              {activeTab !== "today" && activeTab !== "online" && activeTab !== "scheduled" && activeTab !== "completed" && (
                                 <TableCell className="py-4">
                                   <div className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
                                     <Calendar className="h-3.5 w-3.5 text-blue-500" />
@@ -787,7 +801,7 @@ export default function AppointmentsPage() {
                                   <span className="text-slate-400 text-[10px] font-black uppercase tracking-tighter">N/A</span>
                                 )}
                               </TableCell>
-                              {activeTab !== "online" && activeTab !== "allOnline" && (
+                              {activeTab !== "online" && activeTab !== "allOnline" && activeTab !== "scheduled" && activeTab !== "completed" && (
                                 <TableCell className="py-4">
                                   <Badge variant="outline" className="text-[10px] font-bold border-slate-200 dark:border-slate-800 rounded-lg px-2">{apt.type}</Badge>
                                 </TableCell>

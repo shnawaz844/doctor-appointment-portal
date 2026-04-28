@@ -2,7 +2,10 @@ import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { getAuthSession, hasRole } from "@/lib/auth"
 
-export async function GET() {
+export async function GET(req: Request) {
+    const { searchParams } = new URL(req.url)
+    const today = searchParams.get("today") === "true"
+
     try {
         const session = await getAuthSession()
         if (!session) {
@@ -10,6 +13,13 @@ export async function GET() {
         }
 
         let query = supabase.from("invoices").select("*").order("created_at", { ascending: false })
+
+        if (today) {
+            const now = new Date()
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+            const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString()
+            query = query.gte("created_at", startOfDay).lte("created_at", endOfDay)
+        }
 
         if (session.role !== "SUPER_ADMIN") {
             if (!session.hospital_id) return NextResponse.json({ error: "No hospital assigned" }, { status: 403 })
